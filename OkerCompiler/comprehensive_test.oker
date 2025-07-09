@@ -1,0 +1,46 @@
+~ This is a comprehensive test of all Oker features
+let name = "Oker"
+let version = 1
+
+~ Function with multiple parameters
+makef add(a, b):
+    ~ Function comment
+    let result = a + b
+    say "Adding " + str(a) + " + " + str(b) + " = " + str(result)
+    result
+end
+
+~ Function with conditional logic
+makef checkNumber(num):
+    if num > 10:
+        say "Large number: " + str(num)
+    else:
+        say "Small number: " + str(num)
+    end
+end
+
+~ Main execution with comments
+say "Welcome to " + name + " v" + str(version)
+
+~ Test arithmetic and function calls
+let x = add(5, 3)
+let y = add(10, 20)
+
+~ Test conditionals
+checkNumber(5)
+checkNumber(15)
+
+~ Test loops with functions
+let i = 1
+while i < 4:
+    checkNumber(i * 4)
+    i = i + 1
+end
+
+~ Test repeat with nested content
+repeat 2:
+    say "Iteration with name: " + name
+    let temp = add(i, 2)
+end
+
+say "Program completed successfully!"

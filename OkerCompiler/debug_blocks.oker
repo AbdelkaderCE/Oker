@@ -1,0 +1,17 @@
+let x = 5
+
+if x > 3:
+    say "x is greater than 3"
+else:
+    say "x is not greater than 3"
+end
+
+let i = 0
+while i < 3:
+    say "Count: " + str(i)
+    i = i + 1
+end
+
+repeat 2:
+    say "Repeated message"
+end

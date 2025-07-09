@@ -1,0 +1,6 @@
+makef greet(name):
+    say "Hello, " + name + "!"
+end
+
+greet("World")
+greet("Alice")

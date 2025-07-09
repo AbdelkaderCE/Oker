@@ -1,0 +1,3 @@
+let message = "hello"
+let result = upper(message)
+say result

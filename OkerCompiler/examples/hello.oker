@@ -1,0 +1,21 @@
+say "Hello, World!"
+
+let name = "Alice"
+let age = 25
+say "Hello, " + name + "! You are " + str(age) + " years old."
+
+let a = 10
+let b = 3
+say "Addition: " + str(a + b)
+say "Subtraction: " + str(a - b)
+say "Multiplication: " + str(a * b)
+say "Division: " + str(a / b)
+say "Modulo: " + str(a % b)
+
+let greeting = "Hello"
+let world = "World"
+let message = greeting + ", " + world + "!"
+say message
+say "Length of message: " + str(len(message))
+say "Uppercase: " + upper(message)
+say "Lowercase: " + lower(message)

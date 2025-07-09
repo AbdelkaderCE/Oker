@@ -1,0 +1,81 @@
+~ Class example - Simple Person class simulation using functions
+~ Note: This is a simplified class-like structure using functions
+
+~ Person "constructor" function
+makef create_person(name, age):
+    say "Creating person: " + name + " (age " + str(age) + ")"
+    return name + "_" + str(age)
+end
+
+~ Person methods
+makef person_greet(person_id, name, age):
+    say "Hello, I'm " + name + " and I'm " + str(age) + " years old."
+end
+
+makef person_birthday(name, age):
+    let new_age = age + 1
+    say name + " is now " + str(new_age) + " years old! Happy birthday!"
+    return new_age
+end
+
+makef person_introduce(name, age, profession):
+    say "Hi, I'm " + name + ", I'm " + str(age) + " years old and I work as a " + profession + "."
+end
+
+~ Create some "person objects"
+let alice = create_person("Alice", 25)
+let bob = create_person("Bob", 30)
+
+~ Use person methods
+person_greet(alice, "Alice", 25)
+person_greet(bob, "Bob", 30)
+
+~ Simulate birthday
+let alice_new_age = person_birthday("Alice", 25)
+person_greet(alice, "Alice", alice_new_age)
+
+~ Introduce with profession
+person_introduce("Alice", alice_new_age, "Software Engineer")
+person_introduce("Bob", 30, "Data Scientist")
+
+~ Bank Account example
+makef create_account(owner, initial_balance):
+    say "Creating account for " + owner + " with balance: $" + str(initial_balance)
+    return owner + "_account"
+end
+
+makef account_deposit(owner, balance, amount):
+    let new_balance = balance + amount
+    say owner + " deposited $" + str(amount) + ". New balance: $" + str(new_balance)
+    return new_balance
+end
+
+makef account_withdraw(owner, balance, amount):
+    if balance >= amount:
+        let new_balance = balance - amount
+        say owner + " withdrew $" + str(amount) + ". New balance: $" + str(new_balance)
+        return new_balance
+    else:
+        say "Insufficient funds! Balance: $" + str(balance) + ", Requested: $" + str(amount)
+        return balance
+    end
+end
+
+makef account_get_balance(owner, balance):
+    say owner + "'s current balance: $" + str(balance)
+    return balance
+end
+
+~ Create and use bank accounts
+let alice_account = create_account("Alice", 1000)
+let alice_balance = 1000
+
+let alice_balance = account_deposit("Alice", alice_balance, 500)
+let alice_balance = account_withdraw("Alice", alice_balance, 200)
+account_get_balance("Alice", alice_balance)
+
+let bob_account = create_account("Bob", 2000)
+let bob_balance = 2000
+
+let bob_balance = account_withdraw("Bob", bob_balance, 2500)
+account_get_balance("Bob", bob_balance)

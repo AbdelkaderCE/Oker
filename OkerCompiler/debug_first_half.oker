@@ -1,0 +1,16 @@
+~ Simple hello world program
+say "Hello, World!"
+
+~ Variables and basic operations
+let name = "Alice"
+let age = 25
+say "Hello, " + name + "! You are " + str(age) + " years old."
+
+~ Math operations
+let a = 10
+let b = 3
+say "Addition: " + str(a + b)
+say "Subtraction: " + str(a - b)
+say "Multiplication: " + str(a * b)
+say "Division: " + str(a / b)
+say "Modulo: " + str(a % b)

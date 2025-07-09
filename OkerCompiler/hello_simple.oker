@@ -1,0 +1,4 @@
+say "Hello, World!"
+let name = "Alice"
+let age = 25
+say "Hello, " + name + "! You are " + str(age) + " years old."

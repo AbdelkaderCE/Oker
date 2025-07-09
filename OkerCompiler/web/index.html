@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oker Programming Language Compiler</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-code"></i> Oker Compiler</h1>
+            <p>A human-readable programming language with natural syntax</p>
+        </header>
+
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <button id="compile-btn" class="btn btn-primary">
+                    <i class="fas fa-play"></i> Compile & Run
+                </button>
+                <button id="tokens-btn" class="btn btn-secondary">
+                    <i class="fas fa-list"></i> Show Tokens
+                </button>
+                <button id="ast-btn" class="btn btn-secondary">
+                    <i class="fas fa-sitemap"></i> Show AST
+                </button>
+                <button id="bytecode-btn" class="btn btn-secondary">
+                    <i class="fas fa-code"></i> Show Bytecode
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <select id="example-select" class="select">
+                    <option value="">Select Example</option>
+                    <option value="hello">Hello World</option>
+                    <option value="factorial">Factorial</option>
+                    <option value="fibonacci">Fibonacci</option>
+                    <option value="class">Class Example</option>
+                </select>
+                <button id="clear-btn" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Clear
+                </button>
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-edit"></i> Source Code</h3>
+                    <div class="panel-actions">
+                        <button id="save-btn" class="btn-icon" title="Save">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button id="load-btn" class="btn-icon" title="Load">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="source-code" placeholder="Enter your Oker code here...">~ Welcome to Oker!
+~ A programming language with natural syntax
+
+let name = "World"
+say "Hello, " + name + "!"
+
+~ Try some math
+let a = 10
+let b = 5
+let sum = a + b
+say "The sum of " + str(a) + " and " + str(b) + " is " + str(sum)
+
+~ Functions are easy
+makef greet(person):
+    say "Hello, " + person + "!"
+end
+
+greet("Alice")
+greet("Bob")</textarea>
+            </div>
+
+            <div class="output-panel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-terminal"></i> Output</h3>
+                    <div class="panel-actions">
+                        <button id="clear-output-btn" class="btn-icon" title="Clear Output">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="output" class="output-content"></div>
+            </div>
+        </div>
+
+        <div class="debug-panels">
+            <div class="debug-panel" id="tokens-panel" style="display: none;">
+                <div class="panel-header">
+                    <h3><i class="fas fa-list"></i> Tokens</h3>
+                </div>
+                <div id="tokens-output" class="debug-content"></div>
+            </div>
+
+            <div class="debug-panel" id="ast-panel" style="display: none;">
+                <div class="panel-header">
+                    <h3><i class="fas fa-sitemap"></i> Abstract Syntax Tree</h3>
+                </div>
+                <div id="ast-output" class="debug-content"></div>
+            </div>
+
+            <div class="debug-panel" id="bytecode-panel" style="display: none;">
+                <div class="panel-header">
+                    <h3><i class="fas fa-code"></i> Bytecode</h3>
+                </div>
+                <div id="bytecode-output" class="debug-content"></div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About Oker</h4>
+                    <p>Oker is a programming language designed for readability and simplicity, featuring natural language keywords and intuitive syntax.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Features</h4>
+                    <ul>
+                        <li>Natural language keywords</li>
+                        <li>Type inference</li>
+                        <li>Built-in functions</li>
+                        <li>Error handling</li>
+                        <li>File I/O operations</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Reference</h4>
+                    <ul>
+                        <li><code>let x = 5</code> - Variable declaration</li>
+                        <li><code>say "Hello"</code> - Print output</li>
+                        <li><code>makef func(): ... end</code> - Function definition</li>
+                        <li><code>if condition: ... end</code> - Conditional</li>
+                        <li><code>while condition: ... end</code> - Loop</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Oker Programming Language. Open source and available under the MIT License.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

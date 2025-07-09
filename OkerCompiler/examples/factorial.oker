@@ -1,0 +1,38 @@
+~ Factorial calculation using recursion
+makef factorial(n):
+    if n <= 1:
+        return 1
+    else:
+        return n * factorial(n - 1)
+    end
+end
+
+~ Test factorial function
+let n = 5
+let result = factorial(n)
+say str(n) + "! = " + str(result)
+
+~ Factorial using iteration
+makef factorial_iter(n):
+    let result = 1
+    let i = 1
+    while i <= n:
+        let result = result * i
+        let i = i + 1
+    end
+    return result
+end
+
+~ Test iterative factorial
+let n2 = 6
+let result2 = factorial_iter(n2)
+say str(n2) + "! (iterative) = " + str(result2)
+
+~ Calculate factorials for numbers 1 to 10
+say "Factorials from 1 to 10:"
+let i = 1
+while i <= 10:
+    let fact = factorial(i)
+    say str(i) + "! = " + str(fact)
+    let i = i + 1
+end

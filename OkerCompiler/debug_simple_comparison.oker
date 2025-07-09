@@ -1,0 +1,10 @@
+let version = 1
+let x = 5
+
+if x > 3:
+    say "x is greater than 3"
+end
+
+if version > 0:
+    say "version is greater than 0"
+end

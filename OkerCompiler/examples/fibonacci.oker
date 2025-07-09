@@ -1,0 +1,62 @@
+~ Fibonacci sequence generator
+makef fibonacci(n):
+    if n <= 1:
+        return n
+    else:
+        return fibonacci(n - 1) + fibonacci(n - 2)
+    end
+end
+
+~ Generate first 10 Fibonacci numbers
+say "First 10 Fibonacci numbers:"
+let i = 0
+while i < 10:
+    let fib = fibonacci(i)
+    say "F(" + str(i) + ") = " + str(fib)
+    let i = i + 1
+end
+
+~ More efficient iterative version
+makef fibonacci_iter(n):
+    if n <= 1:
+        return n
+    end
+    
+    let prev = 0
+    let curr = 1
+    let i = 2
+    
+    while i <= n:
+        let next = prev + curr
+        let prev = curr
+        let curr = next
+        let i = i + 1
+    end
+    
+    return curr
+end
+
+~ Test iterative version
+say "\nIterative Fibonacci:"
+let n = 20
+let result = fibonacci_iter(n)
+say "F(" + str(n) + ") = " + str(result)
+
+~ Generate Fibonacci sequence up to a limit
+makef fibonacci_sequence(limit):
+    let a = 0
+    let b = 1
+    
+    say "Fibonacci sequence up to " + str(limit) + ":"
+    say str(a)
+    
+    while b <= limit:
+        say str(b)
+        let temp = a + b
+        let a = b
+        let b = temp
+    end
+end
+
+~ Generate sequence up to 100
+fibonacci_sequence(100)

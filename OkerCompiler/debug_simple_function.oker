@@ -1,0 +1,5 @@
+makef simple():
+    say "Hello from function"
+end
+
+simple()
