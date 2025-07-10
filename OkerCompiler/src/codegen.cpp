@@ -164,7 +164,7 @@ void CodeGenerator::generateCallExpression(CallExpression* expr) {
             callee->name == "exists" || callee->name == "listdir" ||
             callee->name == "exit" || callee->name == "sleep" ||
             callee->name == "get" || callee->name == "save" ||
-            callee->name == "deletef") {
+            callee->name == "deletef" || callee->name == "list_add") {
 
             emit(OpCode::BUILTIN_CALL, {callee->name, std::to_string(expr->arguments.size())});
         } else {
