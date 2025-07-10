@@ -16,8 +16,13 @@ void VirtualMachine::execute(const std::vector<Instruction>& bytecode) {
     running = true;
 
     while (running && pc < static_cast<int>(instructions.size())) {
-        executeInstruction(instructions[pc]);
-        pc++;
+        try {
+            executeInstruction(instructions[pc]);
+            pc++;
+        } catch (const std::runtime_error& e) {
+            std::cerr << "Runtime Error: " << e.what() << " at instruction " << pc << std::endl;
+            running = false;
+        }
     }
 }
 
@@ -48,10 +53,6 @@ Value VirtualMachine::peek() {
         throw std::runtime_error("Stack is empty");
     }
     return stack.top();
-}
-
-bool VirtualMachine::isEmpty() {
-    return stack.empty();
 }
 
 void VirtualMachine::setVariable(const std::string& name, const Value& value) {
@@ -188,7 +189,7 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
 
             for (size_t i = 0; i < func.parameters.size(); i++) {
                 if (i < args.size()) {
-                    frame.localVars[func.parameters[i]] = args[i];
+                    frame.localVars[func.parameters[i]] = args[argCount - 1 - i];
                 }
             }
 
@@ -244,23 +245,22 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
 
         case OpCode::GET_INDEX: {
             Value indexVal = pop();
-            Value listVal = pop();
+            Value containerVal = pop();
 
-            if (std::holds_alternative<std::shared_ptr<OkerList>>(listVal)) {
-                auto list = std::get<std::shared_ptr<OkerList>>(listVal);
+            if (std::holds_alternative<std::shared_ptr<OkerList>>(containerVal)) {
+                auto list = std::get<std::shared_ptr<OkerList>>(containerVal);
                 int index = static_cast<int>(valueToNumber(indexVal));
-
                 if (index < 0 || index >= static_cast<int>(list->elements.size())) {
                     throw std::runtime_error("List index out of bounds.");
                 }
-                push(list->elements[index]);
-            } else if (std::holds_alternative<std::shared_ptr<OkerDict>>(listVal)) {
-                auto dict = std::get<std::shared_ptr<OkerDict>>(listVal);
+                push(list->elements.at(index));
+            } else if (std::holds_alternative<std::shared_ptr<OkerDict>>(containerVal)) {
+                auto dict = std::get<std::shared_ptr<OkerDict>>(containerVal);
                 std::string key = valueToString(indexVal);
                 if (dict->pairs.find(key) == dict->pairs.end()) {
                     throw std::runtime_error("Dictionary key not found: " + key);
                 }
-                push(dict->pairs[key]);
+                push(dict->pairs.at(key));
             } else {
                 throw std::runtime_error("Cannot index a non-list/non-dictionary type.");
             }
@@ -268,9 +268,9 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
         }
 
         case OpCode::SET_INDEX: {
+            Value newValue = pop();
             Value indexVal = pop();
             Value containerVal = pop();
-            Value newValue = pop();
 
             if (std::holds_alternative<std::shared_ptr<OkerList>>(containerVal)) {
                 auto list = std::get<std::shared_ptr<OkerList>>(containerVal);

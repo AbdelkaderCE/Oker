@@ -194,13 +194,12 @@ void CodeGenerator::generateListLiteral(ListLiteral* expr) {
 }
 
 void CodeGenerator::generateIndexExpression(IndexExpression* expr) {
-    // Generate code for the object (the list)
+    // Correct, consistent order: object first, then index.
     generateExpression(expr->object.get());
-    // Generate code for the index
     generateExpression(expr->index.get());
-    // Emit the instruction to get the value at the index
     emit(OpCode::GET_INDEX);
 }
+
 
 void CodeGenerator::generateVariableDeclaration(VariableDeclaration* stmt) {
     if (stmt->initializer) {
@@ -212,17 +211,14 @@ void CodeGenerator::generateVariableDeclaration(VariableDeclaration* stmt) {
 }
 
 void CodeGenerator::generateAssignment(Assignment* stmt) {
-    // Check if the target is an index expression (e.g., my_list[0] = ...)
     if (stmt->target->type == NodeType::INDEX_EXPRESSION) {
         IndexExpression* target = static_cast<IndexExpression*>(stmt->target.get());
 
-        // Push the new value onto the stack first
-        generateExpression(stmt->value.get());
-        // Then push the object (the list)
+        // Correct, consistent order: object, then index, then the new value.
         generateExpression(target->object.get());
-        // Then push the index
         generateExpression(target->index.get());
-        // Finally, emit the SET_INDEX instruction
+        generateExpression(stmt->value.get());
+
         emit(OpCode::SET_INDEX);
     } else {
         // Handle regular variable assignment

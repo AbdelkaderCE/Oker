@@ -1,14 +1,13 @@
-~ Test script for Phase 2: Dictionary Support
+~ Test 1: Lists Only
+say "--- Test 1: Verifying List Indexing ---"
 
-say "--- Phase 2 Test: Dictionaries ---"
+let my_list = [10, 20, 30]
+say "  -> Initial list: " + str(my_list)
 
-say "\n1. Creating and printing a dictionary:"
-let person = {"name": "Alice", "age": 30, "is_student": false}
-say "  -> " + str(person)
+my_list[1] = 25 ~ Modify
+say "  -> Modified list: " + str(my_list)
 
-say "\n2. Testing list_add() to ensure it was not broken:"
-let my_list = [1, 2]
-list_add(my_list, 3)
-say "  -> The list is now: " + str(my_list)
+let item = my_list[1] ~ Access
+say "  -> Accessed item: " + str(item)
 
-say "\n--- Dictionary Test Finished ---"
+say "\n--- List Test Finished ---"

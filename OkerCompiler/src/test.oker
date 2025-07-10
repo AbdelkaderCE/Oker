@@ -1,0 +1,120 @@
+~ Oker Language Comprehensive Feature Test
+
+say "--- Oker Master Test Suite ---"
+
+~ --- 1. Core Syntax, Variables, and Operators ---
+say "\n1. Testing Core Syntax & Operators:"
+let my_num = 10
+let my_float = 5.5
+let my_string = "Oker"
+let my_bool = true
+
+say "  -> Variables: " + str(my_num) + ", " + str(my_float) + ", " + my_string + ", " + str(my_bool)
+
+let sum = my_num + my_float          ~ Test addition
+let product = my_num * 2             ~ Test multiplication
+let quotient = (sum - 0.5) / 3       ~ Test subtraction and division
+let remainder = 10 % 3               ~ Test modulo
+say "  -> Math: ((10 + 5.5) - 0.5) / 3 = " + str(quotient) + " with remainder " + str(remainder)
+
+let greeting = "Hello, " + my_string ~ Test string concatenation
+say "  -> String Concat: " + greeting
+
+
+~ --- 2. Control Flow: Conditionals and Loops ---
+say "\n2. Testing Control Flow:"
+if my_num > 5 and my_bool:
+    say "  -> Conditional (if) was true."
+else:
+    say "  -> Conditional (if) was false."
+end
+
+say "  -> While Loop:"
+let i = 3
+while i > 0:
+    say "    - Countdown: " + str(i)
+    let i = i - 1
+end
+
+say "  -> Repeat Loop:"
+repeat 2:
+    say "    - Repeat message."
+end
+
+
+~ --- 3. Functions (Definition, Calling, Recursion) ---
+say "\n3. Testing Functions:"
+makef factorial(n):
+    if n <= 1:
+        return 1
+    end
+    return n * factorial(n - 1)
+end
+
+let fact_5 = factorial(5)
+say "  -> Recursive factorial(5) = " + str(fact_5)
+
+
+~ --- 4. Data Structures: Lists and Dictionaries ---
+say "\n4. Testing Data Structures:"
+let my_list = [10, "two", 30]
+list_add(my_list, false)
+say "  -> List after list_add: " + str(my_list)
+my_list[1] = 2
+say "  -> List after modification: " + str(my_list)
+
+let my_dict = {"language": "Oker", "version": 1}
+say "  -> Dictionary: " + str(my_dict)
+my_dict["version"] = 2 ~ Test modification
+say "  -> Modified dict: " + str(my_dict)
+say "  -> Accessing element: my_dict[\"language\"] = " + str(my_dict["language"])
+
+
+~ --- 5. Built-in Functions ---
+say "\n5. Testing Built-in Functions:"
+say "  -> Type of my_dict is: " + type(my_dict)
+say "  -> Length of '" + my_string + "' is: " + len(my_string)
+say "  -> String funcs: " + upper(my_string) + ", " + lower("Test") + ", '" + strip("  padded  ") + "'"
+say "  -> String split/replace: " + str(replace_str(str(split_str("a-b-c", "-")), "b", "B"))
+say "  -> Math funcs: " + str(abs(-15)) + ", " + str(round(3.14159, 2))
+say "  -> Random number (1-10): " + str(round(random(1, 10)))
+
+
+~ --- 6. File I/O ---
+say "\n6. Testing File I/O:"
+let filename = "test_file.txt"
+save(filename, "Hello from Oker!")
+if exists(filename):
+    say "  -> File '" + filename + "' created successfully."
+    let content = get(filename)
+    say "  -> Content read from file: " + content
+    deletef(filename)
+    if not exists(filename):
+        say "  -> File cleaned up successfully."
+    else:
+        say "  -> ERROR: Failed to delete file."
+    end
+else:
+    say "  -> ERROR: Failed to create file."
+end
+
+~ --- 7. Error Handling (try/fail) ---
+say "\n7. Testing Error Handling:"
+try :
+    say "  -> Entering 'try' block. Attempting 10 / 0..."
+    let error_result = 10 / 0
+    say "  -> This line should NOT be printed."
+fail:
+    say "  -> 'fail' block executed. Error caught successfully!"
+end
+
+
+~ --- 8. Utility Functions ---
+say "\n8. Testing Utility Functions:"
+say "  -> Pausing for 0.1 seconds..."
+sleep(0.1)
+say "  -> Resumed."
+~ say "  -> The input() function would pause here for user input."
+
+
+say "\n--- Oker Master Test Suite Finished ---"

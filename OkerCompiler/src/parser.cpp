@@ -45,6 +45,7 @@ void ListLiteral::print(int indentLevel) const {
         elem->print(indentLevel + 2);
     }
 }
+
 void DictLiteral::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "DictLiteral:\n";
     for (size_t i = 0; i < keys.size(); ++i) {
@@ -176,6 +177,18 @@ void ContinueStatement::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "ContinueStatement\n";
 }
 
+void TryStatement::print(int indentLevel) const {
+    std::cout << indent(indentLevel) << "TryStatement:\n";
+    std::cout << indent(indentLevel + 1) << "Try Block:\n";
+    for (const auto& stmt : tryBlock) {
+        if(stmt) stmt->print(indentLevel + 2);
+    }
+    std::cout << indent(indentLevel + 1) << "Fail Block:\n";
+    for (const auto& stmt : failBlock) {
+        if(stmt) stmt->print(indentLevel + 2);
+    }
+}
+
 
 // Parser implementation
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens), current(0) {}
@@ -238,11 +251,11 @@ std::unique_ptr<Statement> Parser::statement() {
     if (check(TokenType::RETURN)) return returnStatement();
     if (check(TokenType::BREAK)) return breakStatement();
     if (check(TokenType::CONTINUE)) return continueStatement();
+    if (check(TokenType::TRY)) return tryStatement(); // **This is the critical fix**
 
     if (check(TokenType::IDENTIFIER)) {
         size_t savedPos = current;
         advance();
-        // Check for both assignment and index assignment
         if (match(TokenType::ASSIGN) || check(TokenType::LBRACKET)) {
             current = savedPos;
             return assignmentStatement();
@@ -389,6 +402,43 @@ std::unique_ptr<Statement> Parser::repeatStatement() {
 
     return repeatStmt;
 }
+
+std::unique_ptr<Statement> Parser::tryStatement() {
+    Token tryTok = advance(); // consume 'try'
+
+    if (!match(TokenType::COLON)) {
+        throw std::runtime_error(format_error("Expected ':' after 'try'", peek()));
+    }
+    skipNewlines();
+
+    std::vector<std::unique_ptr<Statement>> tryBlock;
+    while (!check(TokenType::FAIL) && !isAtEnd()) {
+        tryBlock.push_back(statement());
+        skipNewlines();
+    }
+
+    if (!match(TokenType::FAIL)) {
+        throw std::runtime_error(format_error("Expected 'fail' block for 'try' statement", peek()));
+    }
+
+    if (!match(TokenType::COLON)) {
+        throw std::runtime_error(format_error("Expected ':' after 'fail'", peek()));
+    }
+    skipNewlines();
+
+    std::vector<std::unique_ptr<Statement>> failBlock;
+    while (!check(TokenType::END) && !isAtEnd()) {
+        failBlock.push_back(statement());
+        skipNewlines();
+    }
+
+    if (!match(TokenType::END)) {
+        throw std::runtime_error(format_error("Expected 'end' to close 'try' statement", peek()));
+    }
+
+    return std::make_unique<TryStatement>(std::move(tryBlock), std::move(failBlock));
+}
+
 
 std::unique_ptr<Statement> Parser::functionDeclaration() {
     Token makefTok = advance(); // consume 'makef'
@@ -640,19 +690,16 @@ std::unique_ptr<Expression> Parser::primary() {
         return std::make_unique<ListLiteral>(std::move(elements));
     }
 
-    // This is the new block for handling dictionaries
     if (match(TokenType::LBRACE)) {
         std::vector<std::unique_ptr<Expression>> keys;
         std::vector<std::unique_ptr<Expression>> values;
 
         if (!check(TokenType::RBRACE)) {
             do {
-                // Parse the key
                 auto key = expression();
                 if (!match(TokenType::COLON)) {
                     throw std::runtime_error(format_error("Expected ':' after dictionary key", peek()));
                 }
-                // Parse the value
                 auto value = expression();
 
                 keys.push_back(std::move(key));

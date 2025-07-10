@@ -23,19 +23,19 @@ enum class NodeType {
     RETURN_STATEMENT,
     BREAK_STATEMENT,
     CONTINUE_STATEMENT,
-    TRY_STATEMENT,
+    TRY_STATEMENT, 
     EXPRESSION_STATEMENT,
     BLOCK_STATEMENT,
     BINARY_EXPRESSION,
     UNARY_EXPRESSION,
     CALL_EXPRESSION,
     MEMBER_EXPRESSION,
-    INDEX_EXPRESSION, // New
+    INDEX_EXPRESSION,
     IDENTIFIER,
     NUMBER_LITERAL,
     STRING_LITERAL,
     BOOLEAN_LITERAL,
-    LIST_LITERAL,     // New
+    LIST_LITERAL,
     DICT_LITERAL
 };
 
@@ -112,26 +112,25 @@ public:
         : Expression(NodeType::LIST_LITERAL, l, c), elements(std::move(elems)) {}
     void print(int indent = 0) const override;
 };
+
+class IndexExpression : public Expression {
+public:
+    std::unique_ptr<Expression> object;
+    std::unique_ptr<Expression> index;
+
+    IndexExpression(std::unique_ptr<Expression> obj, std::unique_ptr<Expression> idx, int l = 0, int c = 0)
+        : Expression(NodeType::INDEX_EXPRESSION, l, c), object(std::move(obj)), index(std::move(idx)) {}
+    void print(int indent = 0) const override;
+};
+
 class DictLiteral : public Expression {
 public:
-    // We store keys and values in separate vectors, matched by index.
-    // The key must be an expression that results in a string.
     std::vector<std::unique_ptr<Expression>> keys;
     std::vector<std::unique_ptr<Expression>> values;
 
     DictLiteral(std::vector<std::unique_ptr<Expression>> k, std::vector<std::unique_ptr<Expression>> v, int l = 0, int c = 0)
         : Expression(NodeType::DICT_LITERAL, l, c), keys(std::move(k)), values(std::move(v)) {}
 
-    void print(int indent = 0) const override;
-};
-
-class IndexExpression : public Expression {
-public:
-    std::unique_ptr<Expression> object; // The list being indexed
-    std::unique_ptr<Expression> index;  // The index to access
-
-    IndexExpression(std::unique_ptr<Expression> obj, std::unique_ptr<Expression> idx, int l = 0, int c = 0)
-        : Expression(NodeType::INDEX_EXPRESSION, l, c), object(std::move(obj)), index(std::move(idx)) {}
     void print(int indent = 0) const override;
 };
 
@@ -260,6 +259,17 @@ public:
     void print(int indent = 0) const override;
 };
 
+class TryStatement : public Statement {
+public:
+    std::vector<std::unique_ptr<Statement>> tryBlock;
+    std::vector<std::unique_ptr<Statement>> failBlock;
+
+    TryStatement(std::vector<std::unique_ptr<Statement>> tryB, std::vector<std::unique_ptr<Statement>> failB, int l = 0, int c = 0)
+        : Statement(NodeType::TRY_STATEMENT, l, c), tryBlock(std::move(tryB)), failBlock(std::move(failB)) {}
+
+    void print(int indent = 0) const override;
+};
+
 class Parser {
 private:
     std::vector<Token> tokens;
@@ -293,6 +303,7 @@ private:
     std::unique_ptr<Statement> returnStatement();
     std::unique_ptr<Statement> breakStatement();
     std::unique_ptr<Statement> continueStatement();
+    std::unique_ptr<Statement> tryStatement(); 
     std::unique_ptr<Statement> expressionStatement();
     std::unique_ptr<Statement> assignmentStatement();
 
