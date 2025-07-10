@@ -415,7 +415,7 @@ void VirtualMachine::executeBuiltinCall(const std::string& name, int argCount) {
         args.push_back(pop());
     }
 
-    std::reverse(args.begin(), args.end());
+    // std::reverse(args.begin(), args.end());
 
     push(builtins->call(name, args, *this));
 }
