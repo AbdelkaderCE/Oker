@@ -32,6 +32,7 @@ Value BuiltinFunctions::call(const std::string& name, const std::vector<Value>& 
     if (name == "exists") return exists(args, vm);
     if (name == "exit") return exit_func(args, vm);
     if (name == "sleep") return sleep_func(args, vm);
+    if (name == "list_add") return list_add(args, vm);
 
     throw std::runtime_error("Unknown built-in function: " + name);
 }
@@ -244,4 +245,22 @@ Value BuiltinFunctions::sleep_func(const std::vector<Value>& args, VirtualMachin
     double seconds = vm.valueToNumber(args[0]);
     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(seconds * 1000)));
     return Value(0.0);
+}
+// List functions
+Value BuiltinFunctions::list_add(const std::vector<Value>& args, VirtualMachine& vm) {
+    if (args.size() < 2) {
+        throw std::runtime_error("list_add expects a list and a value to add");
+    }
+
+    const auto& list_val = args[0];
+    const auto& new_element = args[1];
+
+    if (!std::holds_alternative<std::shared_ptr<OkerList>>(list_val)) {
+        throw std::runtime_error("First argument to list_add must be a list");
+    }
+
+    auto list = std::get<std::shared_ptr<OkerList>>(list_val);
+    list->elements.push_back(new_element);
+
+    return list_val;
 }
