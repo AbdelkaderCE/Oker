@@ -12,7 +12,6 @@ VirtualMachine::~VirtualMachine() = default;
 
 void VirtualMachine::execute(const std::vector<Instruction>& bytecode) {
     instructions = bytecode;
-
     pc = 0;
     running = true;
 
@@ -180,7 +179,6 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
             }
 
             Function& func = it->second;
-
             CallFrame frame(pc);
 
             std::vector<Value> args;
@@ -217,7 +215,6 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
         case OpCode::BUILTIN_CALL: {
             std::string funcName = instr.operands[0];
             int argCount = std::stoi(instr.operands[1]);
-
             executeBuiltinCall(funcName, argCount);
             break;
         }
@@ -228,9 +225,20 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
             for (int i = 0; i < elementCount; ++i) {
                 list->elements.push_back(pop());
             }
-            // FIX: Removed the incorrect double-reversal of the list elements.
-            // The elements are already in the correct order after being popped.
+            // std::reverse(list->elements.begin(), list->elements.end());
             push(Value(list));
+            break;
+        }
+
+        case OpCode::BUILD_DICT: {
+            int pairCount = std::stoi(instr.operands[0]);
+            auto dict = std::make_shared<OkerDict>();
+            for (int i = 0; i < pairCount; ++i) {
+                Value val = pop();
+                Value key = pop();
+                dict->pairs[valueToString(key)] = val;
+            }
+            push(Value(dict));
             break;
         }
 
@@ -238,34 +246,46 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
             Value indexVal = pop();
             Value listVal = pop();
 
-            if (!std::holds_alternative<std::shared_ptr<OkerList>>(listVal)) {
-                throw std::runtime_error("Cannot index a non-list type.");
-            }
-            auto list = std::get<std::shared_ptr<OkerList>>(listVal);
-            int index = static_cast<int>(valueToNumber(indexVal));
+            if (std::holds_alternative<std::shared_ptr<OkerList>>(listVal)) {
+                auto list = std::get<std::shared_ptr<OkerList>>(listVal);
+                int index = static_cast<int>(valueToNumber(indexVal));
 
-            if (index < 0 || index >= static_cast<int>(list->elements.size())) {
-                throw std::runtime_error("List index out of bounds.");
+                if (index < 0 || index >= static_cast<int>(list->elements.size())) {
+                    throw std::runtime_error("List index out of bounds.");
+                }
+                push(list->elements[index]);
+            } else if (std::holds_alternative<std::shared_ptr<OkerDict>>(listVal)) {
+                auto dict = std::get<std::shared_ptr<OkerDict>>(listVal);
+                std::string key = valueToString(indexVal);
+                if (dict->pairs.find(key) == dict->pairs.end()) {
+                    throw std::runtime_error("Dictionary key not found: " + key);
+                }
+                push(dict->pairs[key]);
+            } else {
+                throw std::runtime_error("Cannot index a non-list/non-dictionary type.");
             }
-            push(list->elements[index]);
             break;
         }
 
         case OpCode::SET_INDEX: {
             Value indexVal = pop();
-            Value listVal = pop();
+            Value containerVal = pop();
             Value newValue = pop();
 
-            if (!std::holds_alternative<std::shared_ptr<OkerList>>(listVal)) {
-                throw std::runtime_error("Cannot index a non-list type.");
+            if (std::holds_alternative<std::shared_ptr<OkerList>>(containerVal)) {
+                auto list = std::get<std::shared_ptr<OkerList>>(containerVal);
+                int index = static_cast<int>(valueToNumber(indexVal));
+                if (index < 0 || index >= static_cast<int>(list->elements.size())) {
+                    throw std::runtime_error("List index out of bounds.");
+                }
+                list->elements[index] = newValue;
+            } else if (std::holds_alternative<std::shared_ptr<OkerDict>>(containerVal)) {
+                auto dict = std::get<std::shared_ptr<OkerDict>>(containerVal);
+                std::string key = valueToString(indexVal);
+                dict->pairs[key] = newValue;
+            } else {
+                 throw std::runtime_error("Cannot set index on a non-list/non-dictionary type.");
             }
-            auto list = std::get<std::shared_ptr<OkerList>>(listVal);
-            int index = static_cast<int>(valueToNumber(indexVal));
-
-            if (index < 0 || index >= static_cast<int>(list->elements.size())) {
-                throw std::runtime_error("List index out of bounds.");
-            }
-            list->elements[index] = newValue;
             break;
         }
 
@@ -314,29 +334,20 @@ void VirtualMachine::executeBinaryOp(OpCode opcode) {
                  push(Value(valueToNumber(left) + valueToNumber(right)));
             }
             break;
-
         case OpCode::SUBTRACT:
             push(Value(valueToNumber(left) - valueToNumber(right)));
             break;
-
         case OpCode::MULTIPLY:
             push(Value(valueToNumber(left) * valueToNumber(right)));
             break;
-
         case OpCode::DIVIDE:
-            if (valueToNumber(right) == 0) {
-                throw std::runtime_error("Division by zero");
-            }
+            if (valueToNumber(right) == 0) throw std::runtime_error("Division by zero");
             push(Value(valueToNumber(left) / valueToNumber(right)));
             break;
-
         case OpCode::MODULO:
-            if (valueToNumber(right) == 0) {
-                throw std::runtime_error("Modulo by zero");
-            }
+            if (valueToNumber(right) == 0) throw std::runtime_error("Modulo by zero");
             push(Value(fmod(valueToNumber(left), valueToNumber(right))));
             break;
-
         default:
             throw std::runtime_error("Unknown binary operation");
     }
@@ -344,16 +355,13 @@ void VirtualMachine::executeBinaryOp(OpCode opcode) {
 
 void VirtualMachine::executeUnaryOp(OpCode opcode) {
     Value operand = pop();
-
     switch (opcode) {
         case OpCode::NEGATE:
             push(Value(-valueToNumber(operand)));
             break;
-
         case OpCode::NOT:
             push(Value(!valueToBoolean(operand)));
             break;
-
         default:
             throw std::runtime_error("Unknown unary operation");
     }
@@ -367,10 +375,10 @@ void VirtualMachine::executeComparison(OpCode opcode) {
         double leftNum = valueToNumber(left);
         double rightNum = valueToNumber(right);
         switch (opcode) {
-            case OpCode::LESS_THAN:       push(Value(leftNum < rightNum)); break;
-            case OpCode::LESS_EQUAL:      push(Value(leftNum <= rightNum)); break;
-            case OpCode::GREATER_THAN:    push(Value(leftNum > rightNum)); break;
-            case OpCode::GREATER_EQUAL:   push(Value(leftNum >= rightNum)); break;
+            case OpCode::LESS_THAN: push(Value(leftNum < rightNum)); break;
+            case OpCode::LESS_EQUAL: push(Value(leftNum <= rightNum)); break;
+            case OpCode::GREATER_THAN: push(Value(leftNum > rightNum)); break;
+            case OpCode::GREATER_EQUAL: push(Value(leftNum >= rightNum)); break;
             default: break;
         }
         return;
@@ -378,13 +386,13 @@ void VirtualMachine::executeComparison(OpCode opcode) {
 
     if (left.index() == right.index()) {
          switch (opcode) {
-            case OpCode::EQUAL:     push(Value(left == right)); break;
+            case OpCode::EQUAL: push(Value(left == right)); break;
             case OpCode::NOT_EQUAL: push(Value(left != right)); break;
             default: break;
         }
     } else {
          switch (opcode) {
-            case OpCode::EQUAL:     push(Value(valueToString(left) == valueToString(right))); break;
+            case OpCode::EQUAL: push(Value(valueToString(left) == valueToString(right))); break;
             case OpCode::NOT_EQUAL: push(Value(valueToString(left) != valueToString(right))); break;
             default: break;
         }
@@ -394,16 +402,13 @@ void VirtualMachine::executeComparison(OpCode opcode) {
 void VirtualMachine::executeLogicalOp(OpCode opcode) {
     Value right = pop();
     Value left = pop();
-
     switch (opcode) {
         case OpCode::AND:
             push(Value(valueToBoolean(left) && valueToBoolean(right)));
             break;
-
         case OpCode::OR:
             push(Value(valueToBoolean(left) || valueToBoolean(right)));
             break;
-
         default:
             throw std::runtime_error("Unknown logical operation");
     }
@@ -414,9 +419,7 @@ void VirtualMachine::executeBuiltinCall(const std::string& name, int argCount) {
     for (int i = 0; i < argCount; i++) {
         args.push_back(pop());
     }
-
     // std::reverse(args.begin(), args.end());
-
     push(builtins->call(name, args, *this));
 }
 
@@ -439,6 +442,19 @@ std::string VirtualMachine::valueToString(const Value& value) {
             }
         }
         result += "]";
+        return result;
+    } else if (std::holds_alternative<std::shared_ptr<OkerDict>>(value)) {
+        auto dict = std::get<std::shared_ptr<OkerDict>>(value);
+        std::string result = "{";
+        auto it = dict->pairs.begin();
+        while (it != dict->pairs.end()) {
+            result += "\"" + it->first + "\": " + valueToString(it->second);
+            ++it;
+            if (it != dict->pairs.end()) {
+                result += ", ";
+            }
+        }
+        result += "}";
         return result;
     }
     return "nil";
@@ -474,12 +490,10 @@ void VirtualMachine::printStack() {
     std::cout << "Stack: ";
     std::stack<Value> temp = stack;
     std::vector<Value> values;
-
     while (!temp.empty()) {
         values.push_back(temp.top());
         temp.pop();
     }
-
     for (auto it = values.rbegin(); it != values.rend(); ++it) {
         std::cout << "[" << valueToString(*it) << "] ";
     }

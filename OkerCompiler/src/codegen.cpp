@@ -24,43 +24,33 @@ void CodeGenerator::generateStatement(Statement* stmt) {
         case NodeType::VARIABLE_DECLARATION:
             generateVariableDeclaration(static_cast<VariableDeclaration*>(stmt));
             break;
-
         case NodeType::ASSIGNMENT:
             generateAssignment(static_cast<Assignment*>(stmt));
             break;
-
         case NodeType::FUNCTION_DECLARATION:
             generateFunctionDeclaration(static_cast<FunctionDeclaration*>(stmt));
             break;
-
         case NodeType::IF_STATEMENT:
             generateIfStatement(static_cast<IfStatement*>(stmt));
             break;
-
         case NodeType::WHILE_STATEMENT:
             generateWhileStatement(static_cast<WhileStatement*>(stmt));
             break;
-
         case NodeType::REPEAT_STATEMENT:
             generateRepeatStatement(static_cast<RepeatStatement*>(stmt));
             break;
-
         case NodeType::RETURN_STATEMENT:
             generateReturnStatement(static_cast<ReturnStatement*>(stmt));
             break;
-
         case NodeType::BREAK_STATEMENT:
             generateBreakStatement(static_cast<BreakStatement*>(stmt));
             break;
-
         case NodeType::CONTINUE_STATEMENT:
             generateContinueStatement(static_cast<ContinueStatement*>(stmt));
             break;
-
         case NodeType::EXPRESSION_STATEMENT:
             generateExpressionStatement(static_cast<ExpressionStatement*>(stmt));
             break;
-
         default:
             break;
     }
@@ -71,43 +61,47 @@ void CodeGenerator::generateExpression(Expression* expr) {
         case NodeType::NUMBER_LITERAL:
             generateNumberLiteral(static_cast<NumberLiteral*>(expr));
             break;
-
         case NodeType::STRING_LITERAL:
             generateStringLiteral(static_cast<StringLiteral*>(expr));
             break;
-
         case NodeType::BOOLEAN_LITERAL:
             generateBooleanLiteral(static_cast<BooleanLiteral*>(expr));
             break;
-
         case NodeType::IDENTIFIER:
             generateIdentifier(static_cast<Identifier*>(expr));
             break;
-
         case NodeType::BINARY_EXPRESSION:
             generateBinaryExpression(static_cast<BinaryExpression*>(expr));
             break;
-
         case NodeType::UNARY_EXPRESSION:
             generateUnaryExpression(static_cast<UnaryExpression*>(expr));
             break;
-
         case NodeType::CALL_EXPRESSION:
             generateCallExpression(static_cast<CallExpression*>(expr));
             break;
-
         case NodeType::LIST_LITERAL:
             generateListLiteral(static_cast<ListLiteral*>(expr));
             break;
-
         case NodeType::INDEX_EXPRESSION:
             generateIndexExpression(static_cast<IndexExpression*>(expr));
             break;
-
+        // This case was missing, causing the linker error.
+        case NodeType::DICT_LITERAL:
+            generateDictLiteral(static_cast<DictLiteral*>(expr));
+            break;
         default:
             break;
     }
 }
+
+void CodeGenerator::generateDictLiteral(DictLiteral* expr) {
+    for (size_t i = 0; i < expr->keys.size(); ++i) {
+        generateExpression(expr->keys[i].get());
+        generateExpression(expr->values[i].get());
+    }
+    emit(OpCode::BUILD_DICT, std::to_string(expr->keys.size()));
+}
+
 
 void CodeGenerator::generateBinaryExpression(BinaryExpression* expr) {
     generateExpression(expr->left.get());
@@ -157,14 +151,15 @@ void CodeGenerator::generateCallExpression(CallExpression* expr) {
             callee->name == "round" || callee->name == "sqrt" ||
             callee->name == "pow" || callee->name == "random" ||
             callee->name == "upper" || callee->name == "lower" ||
-            callee->name == "strip" || callee->name == "split" ||
-            callee->name == "join" || callee->name == "replace" ||
-            callee->name == "charAt" || callee->name == "sbuild_new" ||
+            callee->name == "strip" || callee->name == "split_str" ||
+            callee->name == "replace_str" ||callee->name == "charAt" || 
+            callee->name == "sbuild_new" ||
             callee->name == "sbuild_add" || callee->name == "sbuild_get" ||
+            callee->name == "list_add" ||
             callee->name == "exists" || callee->name == "listdir" ||
             callee->name == "exit" || callee->name == "sleep" ||
             callee->name == "get" || callee->name == "save" ||
-            callee->name == "deletef" || callee->name == "list_add") {
+            callee->name == "deletef") {
 
             emit(OpCode::BUILTIN_CALL, {callee->name, std::to_string(expr->arguments.size())});
         } else {
@@ -470,6 +465,7 @@ std::string CodeGenerator::opcodeToString(OpCode opcode) {
         case OpCode::BUILD_LIST: return "BUILD_LIST";
         case OpCode::GET_INDEX: return "GET_INDEX";
         case OpCode::SET_INDEX: return "SET_INDEX";
+        case OpCode::BUILD_DICT: return "BUILD_DICT";
         case OpCode::INCREMENT: return "INCREMENT";
         case OpCode::DECREMENT: return "DECREMENT";
         default: return "UNKNOWN";

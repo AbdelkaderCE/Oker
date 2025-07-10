@@ -11,7 +11,8 @@ enum class ValueType {
     STRING,
     BOOLEAN,
     FUNCTION,
-    LIST, // New type
+    LIST,
+    DICTIONARY,
     VOID,
     UNKNOWN
 };
@@ -62,6 +63,7 @@ private:
     ValueType analyzeIdentifier(Identifier* expr);
     ValueType analyzeListLiteral(ListLiteral* expr);
     ValueType analyzeIndexExpression(IndexExpression* expr);
+    ValueType analyzeDictLiteral(DictLiteral* expr);
 
     void analyzeVariableDeclaration(VariableDeclaration* stmt);
     void analyzeAssignment(Assignment* stmt);

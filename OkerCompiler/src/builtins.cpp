@@ -22,17 +22,21 @@ Value BuiltinFunctions::call(const std::string& name, const std::vector<Value>& 
     if (name == "lower") return lower(args, vm);
     if (name == "strip") return strip(args, vm);
     if (name == "charAt") return charAt(args, vm);
+    if (name == "split_str") return split_str(args, vm);     // Using new name
+    if (name == "replace_str") return replace_str(args, vm); // Using new name
     if (name == "sbuild_new") return sbuild_new(args);
     if (name == "sbuild_add") return sbuild_add(args, vm);
     if (name == "sbuild_get") return sbuild_get(args);
+    if (name == "list_add") return list_add(args);
     if (name == "abs") return abs_func(args, vm);
+    if (name == "random") return random_num(args, vm);   // Using new name
+    if (name == "round") return round_num(args, vm);
     if (name == "get") return get(args, vm);
     if (name == "save") return save(args, vm);
     if (name == "deletef") return deletef(args, vm);
     if (name == "exists") return exists(args, vm);
     if (name == "exit") return exit_func(args, vm);
     if (name == "sleep") return sleep_func(args, vm);
-    if (name == "list_add") return list_add(args, vm);
 
     throw std::runtime_error("Unknown built-in function: " + name);
 }
@@ -146,6 +150,45 @@ Value BuiltinFunctions::charAt(const std::vector<Value>& args, VirtualMachine& v
     return Value(std::string(1, str[index]));
 }
 
+Value BuiltinFunctions::split_str(const std::vector<Value>& args, VirtualMachine& vm) {
+    if (args.size() < 2) {
+        throw std::runtime_error("split_str() requires a string and a delimiter");
+    }
+
+    std::string str_to_split = vm.valueToString(args[0]);
+    std::string delimiter = vm.valueToString(args[1]);
+    auto list = std::make_shared<OkerList>();
+
+    size_t start = 0;
+    size_t end = str_to_split.find(delimiter);
+    while (end != std::string::npos) {
+        list->elements.push_back(Value(str_to_split.substr(start, end - start)));
+        start = end + delimiter.length();
+        end = str_to_split.find(delimiter, start);
+    }
+    list->elements.push_back(Value(str_to_split.substr(start, end)));
+
+    return Value(list);
+}
+
+Value BuiltinFunctions::replace_str(const std::vector<Value>& args, VirtualMachine& vm) {
+    if (args.size() < 3) {
+        throw std::runtime_error("replace_str() requires an original string, a substring to replace, and a replacement");
+    }
+
+    std::string original = vm.valueToString(args[0]);
+    std::string to_replace = vm.valueToString(args[1]);
+    std::string replacement = vm.valueToString(args[2]);
+
+    size_t start_pos = 0;
+    while((start_pos = original.find(to_replace, start_pos)) != std::string::npos) {
+        original.replace(start_pos, to_replace.length(), replacement);
+        start_pos += replacement.length(); 
+    }
+
+    return Value(original);
+}
+
 // String Builder functions
 Value BuiltinFunctions::sbuild_new(const std::vector<Value>& args) {
     (void)args; // Suppress unused parameter warning
@@ -165,12 +208,64 @@ Value BuiltinFunctions::sbuild_get(const std::vector<Value>& args) {
     return Value(string_builder.str());
 }
 
+// List functions
+Value BuiltinFunctions::list_add(const std::vector<Value>& args) {
+    if (args.size() < 2) {
+        throw std::runtime_error("list_add expects a list and a value to add");
+    }
+
+    const auto& list_val = args[0];
+    const auto& new_element = args[1];
+
+    if (!std::holds_alternative<std::shared_ptr<OkerList>>(list_val)) {
+        throw std::runtime_error("First argument to list_add must be a list");
+    }
+
+    auto list = std::get<std::shared_ptr<OkerList>>(list_val);
+    list->elements.push_back(new_element);
+
+    return list_val;
+}
 
 // Math functions
 Value BuiltinFunctions::abs_func(const std::vector<Value>& args, VirtualMachine& vm) {
     if (args.empty()) return Value(0.0);
     return Value(std::abs(vm.valueToNumber(args[0])));
 }
+
+Value BuiltinFunctions::random_num(const std::vector<Value>& args, VirtualMachine& vm) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
+    if (args.size() == 0) {
+        std::uniform_real_distribution<> distrib(0.0, 1.0);
+        return Value(distrib(gen));
+    }
+
+    if (args.size() != 2) {
+        throw std::runtime_error("random_num() requires two number arguments for min and max");
+    }
+
+    double min = vm.valueToNumber(args[0]);
+    double max = vm.valueToNumber(args[1]);
+    std::uniform_real_distribution<> distrib(min, max);
+
+    return Value(distrib(gen));
+}
+Value BuiltinFunctions::round_num(const std::vector<Value>& args, VirtualMachine& vm) {
+    if (args.empty()) {
+        throw std::runtime_error("round_num() requires at least one number argument");
+    }
+    double number = vm.valueToNumber(args[0]);
+    if (args.size() == 1) {
+        return Value(std::round(number));
+    } else {
+        double places = vm.valueToNumber(args[1]);
+        double multiplier = std::pow(10.0, places);
+        return Value(std::round(number * multiplier) / multiplier);
+    }
+}
+
 
 // File I/O functions
 Value BuiltinFunctions::get(const std::vector<Value>& args, VirtualMachine& vm) {
@@ -245,22 +340,4 @@ Value BuiltinFunctions::sleep_func(const std::vector<Value>& args, VirtualMachin
     double seconds = vm.valueToNumber(args[0]);
     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(seconds * 1000)));
     return Value(0.0);
-}
-// List functions
-Value BuiltinFunctions::list_add(const std::vector<Value>& args, VirtualMachine& vm) {
-    if (args.size() < 2) {
-        throw std::runtime_error("list_add expects a list and a value to add");
-    }
-
-    const auto& list_val = args[0];
-    const auto& new_element = args[1];
-
-    if (!std::holds_alternative<std::shared_ptr<OkerList>>(list_val)) {
-        throw std::runtime_error("First argument to list_add must be a list");
-    }
-
-    auto list = std::get<std::shared_ptr<OkerList>>(list_val);
-    list->elements.push_back(new_element);
-
-    return list_val;
 }

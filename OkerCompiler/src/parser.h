@@ -112,6 +112,18 @@ public:
         : Expression(NodeType::LIST_LITERAL, l, c), elements(std::move(elems)) {}
     void print(int indent = 0) const override;
 };
+class DictLiteral : public Expression {
+public:
+    // We store keys and values in separate vectors, matched by index.
+    // The key must be an expression that results in a string.
+    std::vector<std::unique_ptr<Expression>> keys;
+    std::vector<std::unique_ptr<Expression>> values;
+
+    DictLiteral(std::vector<std::unique_ptr<Expression>> k, std::vector<std::unique_ptr<Expression>> v, int l = 0, int c = 0)
+        : Expression(NodeType::DICT_LITERAL, l, c), keys(std::move(k)), values(std::move(v)) {}
+
+    void print(int indent = 0) const override;
+};
 
 class IndexExpression : public Expression {
 public:

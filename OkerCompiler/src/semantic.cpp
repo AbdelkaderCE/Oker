@@ -61,9 +61,9 @@ void SemanticAnalyzer::initializeBuiltins() {
     currentScope->define("upper", ValueType::FUNCTION, true);
     currentScope->define("lower", ValueType::FUNCTION, true);
     currentScope->define("strip", ValueType::FUNCTION, true);
-    currentScope->define("split", ValueType::FUNCTION, true);
+    currentScope->define("split_str", ValueType::FUNCTION, true);
     currentScope->define("join", ValueType::FUNCTION, true);
-    currentScope->define("replace", ValueType::FUNCTION, true);
+    currentScope->define("replace_str", ValueType::FUNCTION, true);
     currentScope->define("charAt", ValueType::FUNCTION, true);
     currentScope->define("sbuild_new", ValueType::FUNCTION, true);
     currentScope->define("sbuild_add", ValueType::FUNCTION, true);
@@ -112,6 +112,8 @@ ValueType SemanticAnalyzer::analyzeExpression(Expression* expr) {
 
         case NodeType::INDEX_EXPRESSION:
             return analyzeIndexExpression(static_cast<IndexExpression*>(expr));
+        case NodeType::DICT_LITERAL:
+            return analyzeDictLiteral(static_cast<DictLiteral*>(expr));
 
         default:
             throw std::runtime_error("Unknown expression type in semantic analysis");
@@ -318,6 +320,18 @@ ValueType SemanticAnalyzer::analyzeIndexExpression(IndexExpression* expr) {
     // so we return UNKNOWN.
     return ValueType::UNKNOWN;
 }
+ValueType SemanticAnalyzer::analyzeDictLiteral(DictLiteral* expr) {
+    for (size_t i = 0; i < expr->keys.size(); ++i) {
+        ValueType keyType = analyzeExpression(expr->keys[i].get());
+        // It's good practice to ensure dictionary keys are strings.
+        if (keyType != ValueType::STRING && keyType != ValueType::UNKNOWN) {
+            // We could throw an error here, but for now, we'll allow it
+            // and let the VM handle potential runtime errors.
+        }
+        analyzeExpression(expr->values[i].get());
+    }
+    return ValueType::DICTIONARY;
+}
 
 void SemanticAnalyzer::analyzeVariableDeclaration(VariableDeclaration* stmt) {
     ValueType initType = ValueType::UNKNOWN;
@@ -470,6 +484,7 @@ std::string SemanticAnalyzer::typeToString(ValueType type) {
         case ValueType::BOOLEAN: return "boolean";
         case ValueType::FUNCTION: return "function";
         case ValueType::LIST: return "list";
+        case ValueType::DICTIONARY: return "dictionary";
         case ValueType::VOID: return "void";
         case ValueType::UNKNOWN: return "unknown";
         default: return "unknown";

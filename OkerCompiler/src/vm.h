@@ -16,13 +16,18 @@ struct Value;
 struct OkerList {
     std::vector<Value> elements;
 };
+struct OkerDict {
+    // A dictionary is a map from a string key to any Oker Value
+    std::unordered_map<std::string, Value> pairs;
+};
 
 // The single, authoritative definition of a Value in Oker.
 // It is a struct that inherits from std::variant to allow forward declaration.
-struct Value : public std::variant<double, std::string, bool, std::shared_ptr<OkerList>> {
+struct Value : public std::variant<double, std::string, bool, std::shared_ptr<OkerList>, std::shared_ptr<OkerDict>> {
     // Inherit constructors from std::variant
     using variant::variant;
 };
+
 
 
 struct Function {

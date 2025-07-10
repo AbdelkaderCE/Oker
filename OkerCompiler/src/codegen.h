@@ -70,6 +70,7 @@ enum class OpCode {
     BUILD_LIST,
     GET_INDEX,
     SET_INDEX,
+    BUILD_DICT,
 
     // Optimized Opcodes
     INCREMENT,
@@ -112,6 +113,7 @@ private:
     void generateBooleanLiteral(BooleanLiteral* expr);
     void generateListLiteral(ListLiteral* expr);
     void generateIndexExpression(IndexExpression* expr);
+    void generateDictLiteral(DictLiteral* expr);
 
     void generateVariableDeclaration(VariableDeclaration* stmt);
     void generateAssignment(Assignment* stmt);

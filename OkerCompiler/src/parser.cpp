@@ -45,6 +45,16 @@ void ListLiteral::print(int indentLevel) const {
         elem->print(indentLevel + 2);
     }
 }
+void DictLiteral::print(int indentLevel) const {
+    std::cout << indent(indentLevel) << "DictLiteral:\n";
+    for (size_t i = 0; i < keys.size(); ++i) {
+        std::cout << indent(indentLevel + 1) << "Pair " << i << ":\n";
+        std::cout << indent(indentLevel + 2) << "Key:\n";
+        keys[i]->print(indentLevel + 3);
+        std::cout << indent(indentLevel + 2) << "Value:\n";
+        values[i]->print(indentLevel + 3);
+    }
+}
 
 void IndexExpression::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "IndexExpression:\n";
@@ -628,6 +638,33 @@ std::unique_ptr<Expression> Parser::primary() {
             throw std::runtime_error(format_error("Expected ']' after list elements", peek()));
         }
         return std::make_unique<ListLiteral>(std::move(elements));
+    }
+
+    // This is the new block for handling dictionaries
+    if (match(TokenType::LBRACE)) {
+        std::vector<std::unique_ptr<Expression>> keys;
+        std::vector<std::unique_ptr<Expression>> values;
+
+        if (!check(TokenType::RBRACE)) {
+            do {
+                // Parse the key
+                auto key = expression();
+                if (!match(TokenType::COLON)) {
+                    throw std::runtime_error(format_error("Expected ':' after dictionary key", peek()));
+                }
+                // Parse the value
+                auto value = expression();
+
+                keys.push_back(std::move(key));
+                values.push_back(std::move(value));
+            } while (match(TokenType::COMMA));
+        }
+
+        if (!match(TokenType::RBRACE)) {
+            throw std::runtime_error(format_error("Expected '}' to close dictionary", peek()));
+        }
+
+        return std::make_unique<DictLiteral>(std::move(keys), std::move(values));
     }
 
     throw std::runtime_error(format_error("Expected expression", peek()));
