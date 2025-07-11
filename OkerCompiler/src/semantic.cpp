@@ -2,14 +2,15 @@
 #include <stdexcept>
 #include <iostream>
 
-void Scope::define(const std::string& name, ValueType type, bool isFunction) {
-    symbols[name] = Symbol(name, type, isFunction);
+// --- Scope Implementation ---
+void Scope::define(const std::string& name, std::unique_ptr<Symbol> symbol) {
+    symbols[name] = std::move(symbol);
 }
 
 Symbol* Scope::lookup(const std::string& name) {
     auto it = symbols.find(name);
     if (it != symbols.end()) {
-        return &it->second;
+        return it->second.get();
     }
     if (parent) {
         return parent->lookup(name);
@@ -21,7 +22,9 @@ bool Scope::exists(const std::string& name) {
     return lookup(name) != nullptr;
 }
 
-SemanticAnalyzer::SemanticAnalyzer() : currentScope(nullptr), currentFunctionReturnType(ValueType::VOID), inFunction(false), loopDepth(0) {
+
+// --- SemanticAnalyzer Implementation ---
+SemanticAnalyzer::SemanticAnalyzer() : currentScope(nullptr), currentFunctionReturnType(ValueType::VOID), inFunction(false), loopDepth(0), currentClass(nullptr) {
     scopes.push_back(std::make_unique<Scope>());
     currentScope = scopes.back().get();
     initializeBuiltins();
@@ -41,28 +44,14 @@ void SemanticAnalyzer::exitScope() {
 }
 
 void SemanticAnalyzer::initializeBuiltins() {
-    currentScope->define("say", ValueType::FUNCTION, true);
-    currentScope->define("input", ValueType::FUNCTION, true);
-    currentScope->define("str", ValueType::FUNCTION, true);
-    currentScope->define("num", ValueType::FUNCTION, true);
-    currentScope->define("bool", ValueType::FUNCTION, true);
-    currentScope->define("len", ValueType::FUNCTION, true);
-    currentScope->define("type", ValueType::FUNCTION, true);
-    currentScope->define("abs", ValueType::FUNCTION, true);
-    currentScope->define("random", ValueType::FUNCTION, true);
-    currentScope->define("round", ValueType::FUNCTION, true);
-    currentScope->define("upper", ValueType::FUNCTION, true);
-    currentScope->define("lower", ValueType::FUNCTION, true);
-    currentScope->define("strip", ValueType::FUNCTION, true);
-    currentScope->define("split_str", ValueType::FUNCTION, true);
-    currentScope->define("replace_str", ValueType::FUNCTION, true);
-    currentScope->define("list_add", ValueType::FUNCTION, true);
-    currentScope->define("exists", ValueType::FUNCTION, true);
-    currentScope->define("get", ValueType::FUNCTION, true);
-    currentScope->define("save", ValueType::FUNCTION, true);
-    currentScope->define("deletef", ValueType::FUNCTION, true);
-    currentScope->define("exit", ValueType::FUNCTION, true);
-    currentScope->define("sleep", ValueType::FUNCTION, true);
+    auto builtins = {
+        "say", "input", "str", "num", "bool", "len", "type", "abs", "random",
+        "round", "upper", "lower", "strip", "split_str", "replace_str",
+        "list_add", "exists", "get", "save", "deletef", "exit", "sleep"
+    };
+    for (const auto& name : builtins) {
+        currentScope->define(name, std::make_unique<Symbol>(name, ValueType::FUNCTION, true));
+    }
 }
 
 void SemanticAnalyzer::analyze(Program* program) {
@@ -80,10 +69,17 @@ ValueType SemanticAnalyzer::analyzeExpression(Expression* expr) {
         case NodeType::IDENTIFIER: return analyzeIdentifier(static_cast<Identifier*>(expr));
         case NodeType::BINARY_EXPRESSION: return analyzeBinaryExpression(static_cast<BinaryExpression*>(expr));
         case NodeType::UNARY_EXPRESSION: return analyzeUnaryExpression(static_cast<UnaryExpression*>(expr));
-        case NodeType::CALL_EXPRESSION: return analyzeCallExpression(static_cast<CallExpression*>(expr));
+        case NodeType::CALL_EXPRESSION:
+            // Check if this is a constructor call
+            if (dynamic_cast<CallExpression*>(expr)->callee->type == NodeType::IDENTIFIER) {
+                 return analyzeCallExpression(static_cast<CallExpression*>(expr));
+            }
+            // This is a special case for 'new' expressions, which are parsed as CallExpressions
+            return analyzeNewExpression(static_cast<CallExpression*>(expr));
         case NodeType::LIST_LITERAL: return analyzeListLiteral(static_cast<ListLiteral*>(expr));
         case NodeType::INDEX_EXPRESSION: return analyzeIndexExpression(static_cast<IndexExpression*>(expr));
         case NodeType::DICT_LITERAL: return analyzeDictLiteral(static_cast<DictLiteral*>(expr));
+        case NodeType::MEMBER_EXPRESSION: return analyzeMemberExpression(static_cast<MemberExpression*>(expr));
         default: throw std::runtime_error("Unknown expression type in semantic analysis");
     }
 }
@@ -94,6 +90,7 @@ void SemanticAnalyzer::analyzeStatement(Statement* stmt) {
         case NodeType::VARIABLE_DECLARATION: analyzeVariableDeclaration(static_cast<VariableDeclaration*>(stmt)); break;
         case NodeType::ASSIGNMENT: analyzeAssignment(static_cast<Assignment*>(stmt)); break;
         case NodeType::FUNCTION_DECLARATION: analyzeFunctionDeclaration(static_cast<FunctionDeclaration*>(stmt)); break;
+        case NodeType::CLASS_DECLARATION: analyzeClassDeclaration(static_cast<ClassDeclaration*>(stmt)); break;
         case NodeType::IF_STATEMENT: analyzeIfStatement(static_cast<IfStatement*>(stmt)); break;
         case NodeType::WHILE_STATEMENT: analyzeWhileStatement(static_cast<WhileStatement*>(stmt)); break;
         case NodeType::REPEAT_STATEMENT: analyzeRepeatStatement(static_cast<RepeatStatement*>(stmt)); break;
@@ -149,7 +146,13 @@ ValueType SemanticAnalyzer::analyzeUnaryExpression(UnaryExpression* expr) {
 
 ValueType SemanticAnalyzer::analyzeCallExpression(CallExpression* expr) {
     Identifier* callee = dynamic_cast<Identifier*>(expr->callee.get());
-    if (!callee) throw std::runtime_error("Can only call functions by name");
+    if (!callee) { // This handles method calls like `my_instance.my_method()`
+         if (expr->callee->type == NodeType::MEMBER_EXPRESSION) {
+            return analyzeMemberExpression(static_cast<MemberExpression*>(expr->callee.get()));
+        }
+        throw std::runtime_error("Can only call functions by name or method");
+    }
+
 
     Symbol* symbol = currentScope->lookup(callee->name);
     if (!symbol) throw std::runtime_error("Undefined function: " + callee->name);
@@ -162,6 +165,9 @@ ValueType SemanticAnalyzer::analyzeCallExpression(CallExpression* expr) {
 }
 
 ValueType SemanticAnalyzer::analyzeIdentifier(Identifier* expr) {
+    if (expr->name == "this" && currentClass) {
+        return ValueType::INSTANCE;
+    }
     Symbol* symbol = currentScope->lookup(expr->name);
     if (!symbol) throw std::runtime_error("Undefined variable: " + expr->name);
     return symbol->type;
@@ -207,12 +213,44 @@ ValueType SemanticAnalyzer::analyzeDictLiteral(DictLiteral* expr) {
     return ValueType::DICTIONARY;
 }
 
+// New function to analyze member access
+ValueType SemanticAnalyzer::analyzeMemberExpression(MemberExpression* expr) {
+    ValueType objectType = analyzeExpression(expr->object.get());
+    if (objectType != ValueType::INSTANCE) {
+        throw std::runtime_error("Member access ('.') is only valid on class instances.");
+    }
+    // Further analysis would require knowing the class of the instance
+    // to check if the property exists. For now, we assume it's valid.
+    return ValueType::UNKNOWN; // The type of the property is unknown
+}
+
+// New function to analyze constructor calls
+ValueType SemanticAnalyzer::analyzeNewExpression(CallExpression* expr) {
+    Identifier* className = dynamic_cast<Identifier*>(expr->callee.get());
+    if (!className) {
+        throw std::runtime_error("Expected a class name after 'new'.");
+    }
+
+    Symbol* symbol = currentScope->lookup(className->name);
+    if (!symbol || symbol->type != ValueType::CLASS) {
+        throw std::runtime_error("'" + className->name + "' is not a defined class.");
+    }
+
+    // Analyze arguments if there is a constructor
+    // For now, just analyze the expressions
+    for (const auto& arg : expr->arguments) {
+        analyzeExpression(arg.get());
+    }
+
+    return ValueType::INSTANCE;
+}
+
 void SemanticAnalyzer::analyzeVariableDeclaration(VariableDeclaration* stmt) {
     ValueType initType = ValueType::UNKNOWN;
     if (stmt->initializer) {
         initType = analyzeExpression(stmt->initializer.get());
     }
-    currentScope->define(stmt->name, initType);
+    currentScope->define(stmt->name, std::make_unique<Symbol>(stmt->name, initType));
 }
 
 void SemanticAnalyzer::analyzeAssignment(Assignment* stmt) {
@@ -221,12 +259,11 @@ void SemanticAnalyzer::analyzeAssignment(Assignment* stmt) {
 }
 
 void SemanticAnalyzer::analyzeFunctionDeclaration(FunctionDeclaration* stmt) {
-    currentScope->define(stmt->name, ValueType::FUNCTION, true);
-    Symbol* funcSymbol = currentScope->lookup(stmt->name);
+    currentScope->define(stmt->name, std::make_unique<Symbol>(stmt->name, ValueType::FUNCTION, true));
 
     enterScope();
     for (const auto& param : stmt->parameters) {
-        currentScope->define(param, ValueType::UNKNOWN);
+        currentScope->define(param, std::make_unique<Symbol>(param, ValueType::UNKNOWN));
     }
     inFunction = true;
     for (auto& bodyStmt : stmt->body) {
@@ -234,6 +271,24 @@ void SemanticAnalyzer::analyzeFunctionDeclaration(FunctionDeclaration* stmt) {
     }
     inFunction = false;
     exitScope();
+}
+
+// New function to analyze class declarations
+void SemanticAnalyzer::analyzeClassDeclaration(ClassDeclaration* stmt) {
+    auto classSymbol = std::make_unique<ClassSymbol>(stmt->name);
+    currentClass = classSymbol.get();
+
+    enterScope();
+    for (const auto& method : stmt->methods) {
+        auto methodSymbol = std::make_unique<Symbol>(method->name, ValueType::FUNCTION, true);
+        // In a more complex system, you'd analyze parameter types here
+        classSymbol->methods[method->name] = std::move(methodSymbol);
+        analyzeFunctionDeclaration(method.get());
+    }
+    exitScope();
+
+    currentScope->define(stmt->name, std::move(classSymbol));
+    currentClass = nullptr;
 }
 
 void SemanticAnalyzer::analyzeIfStatement(IfStatement* stmt) {
@@ -318,6 +373,8 @@ std::string SemanticAnalyzer::typeToString(ValueType type) {
         case ValueType::STRING: return "string";
         case ValueType::BOOLEAN: return "boolean";
         case ValueType::FUNCTION: return "function";
+        case ValueType::CLASS: return "class";
+        case ValueType::INSTANCE: return "instance";
         case ValueType::LIST: return "list";
         case ValueType::DICTIONARY: return "dictionary";
         case ValueType::VOID: return "void";

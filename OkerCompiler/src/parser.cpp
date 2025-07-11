@@ -82,13 +82,21 @@ void UnaryExpression::print(int indentLevel) const {
 }
 
 void CallExpression::print(int indentLevel) const {
-    std::cout << indent(indentLevel) << "CallExpression:\n";
+    std::cout << indent(indentLevel) << "CallExpression" << (isNew ? " (new)" : "") << ":\n";
     std::cout << indent(indentLevel + 1) << "Callee:\n";
     if (callee) callee->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Arguments:\n";
     for (const auto& arg : arguments) {
         if (arg) arg->print(indentLevel + 2);
     }
+}
+
+void MemberExpression::print(int indentLevel) const {
+    std::cout << indent(indentLevel) << "MemberExpression:\n";
+    std::cout << indent(indentLevel + 1) << "Object:\n";
+    if (object) object->print(indentLevel + 2);
+    std::cout << indent(indentLevel + 1) << "Property:\n";
+    if (property) property->print(indentLevel + 2);
 }
 
 // Statement implementations
@@ -119,6 +127,15 @@ void FunctionDeclaration::print(int indentLevel) const {
         if(stmt) stmt->print(indentLevel + 2);
     }
 }
+
+void ClassDeclaration::print(int indentLevel) const {
+    std::cout << indent(indentLevel) << "ClassDeclaration: " << name << "\n";
+    std::cout << indent(indentLevel + 1) << "Methods:\n";
+    for (const auto& method : methods) {
+        if (method) method->print(indentLevel + 2);
+    }
+}
+
 
 void IfStatement::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "IfStatement:\n";
@@ -234,6 +251,7 @@ std::unique_ptr<Program> Parser::parse() {
 }
 
 std::unique_ptr<Statement> Parser::statement() {
+    if (check(TokenType::CLASS)) return classDeclaration();
     if (check(TokenType::LET)) return letStatement();
     if (check(TokenType::SAY)) return sayStatement();
     if (check(TokenType::IF)) return ifStatement();
@@ -252,6 +270,25 @@ std::unique_ptr<Statement> Parser::statement() {
     }
 
     return std::make_unique<ExpressionStatement>(std::move(expr));
+}
+
+std::unique_ptr<Statement> Parser::classDeclaration() {
+    advance(); // consume 'class'
+    if (!check(TokenType::IDENTIFIER)) throw std::runtime_error(format_error("Expected class name", peek()));
+    std::string name = advance().value;
+
+    if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after class name", peek()));
+    skipNewlines();
+
+    std::vector<std::unique_ptr<FunctionDeclaration>> methods;
+    while (!check(TokenType::END) && !isAtEnd()) {
+        if (!check(TokenType::MAKEF)) throw std::runtime_error(format_error("Only methods (makef) are allowed inside a class", peek()));
+        methods.push_back(std::unique_ptr<FunctionDeclaration>(static_cast<FunctionDeclaration*>(functionDeclaration().release())));
+        skipNewlines();
+    }
+
+    if (!match(TokenType::END)) throw std::runtime_error(format_error("Expected 'end' to close class", peek()));
+    return std::make_unique<ClassDeclaration>(name, std::move(methods));
 }
 
 std::unique_ptr<Statement> Parser::letStatement() {
@@ -289,7 +326,7 @@ std::unique_ptr<Statement> Parser::ifStatement() {
                 ifStmt->elseBranch.push_back(statement());
                 skipNewlines();
             }
-        } else { // Handles 'else if'
+        } else {
             ifStmt->elseBranch.push_back(ifStatement());
         }
     }
@@ -455,7 +492,12 @@ std::unique_ptr<Expression> Parser::call() {
             auto index = expression();
             if (!match(TokenType::RBRACKET)) throw std::runtime_error(format_error("Expected ']' after index", peek()));
             expr = std::make_unique<IndexExpression>(std::move(expr), std::move(index));
-        } else {
+        } else if (match(TokenType::DOT)) {
+            if (!check(TokenType::IDENTIFIER)) throw std::runtime_error(format_error("Expected property name after '.'", peek()));
+            auto property = std::make_unique<Identifier>(advance().value);
+            expr = std::make_unique<MemberExpression>(std::move(expr), std::move(property));
+        }
+        else {
             break;
         }
     }
@@ -466,6 +508,22 @@ std::unique_ptr<Expression> Parser::primary() {
     if (match(TokenType::BOOLEAN)) return std::make_unique<BooleanLiteral>(tokens[current - 1].value == "true");
     if (match(TokenType::NUMBER)) return std::make_unique<NumberLiteral>(std::stod(tokens[current - 1].value));
     if (match(TokenType::STRING)) return std::make_unique<StringLiteral>(tokens[current - 1].value);
+
+    // CORRECTED 'new' EXPRESSION LOGIC
+    if (match(TokenType::NEW)) {
+        auto expr = call(); // Parses the `Person(...)` part
+        if (expr->type != NodeType::CALL_EXPRESSION) {
+            throw std::runtime_error(format_error("Expected constructor call after 'new'", peek()));
+        }
+        // Mark this CallExpression as a 'new' call
+        static_cast<CallExpression*>(expr.get())->isNew = true;
+        return expr;
+    }
+
+    if (match(TokenType::THIS)) {
+        return std::make_unique<Identifier>("this");
+    }
+
     if (match(TokenType::IDENTIFIER)) return std::make_unique<Identifier>(tokens[current - 1].value);
 
     if (match(TokenType::LPAREN)) {
@@ -480,7 +538,7 @@ std::unique_ptr<Expression> Parser::primary() {
         if (!check(TokenType::RBRACKET)) {
             do {
                 skipNewlines();
-                if (check(TokenType::RBRACKET)) break; // Handles trailing comma
+                if (check(TokenType::RBRACKET)) break;
                 elements.push_back(expression());
                 skipNewlines();
             } while (match(TokenType::COMMA));
@@ -496,7 +554,7 @@ std::unique_ptr<Expression> Parser::primary() {
         if (!check(TokenType::RBRACE)) {
             do {
                 skipNewlines();
-                if (check(TokenType::RBRACE)) break; // Handles trailing comma
+                if (check(TokenType::RBRACE)) break;
                 keys.push_back(primary());
                 if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after dictionary key", peek()));
                 values.push_back(expression());

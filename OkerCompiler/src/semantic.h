@@ -5,12 +5,15 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <memory>
 
 enum class ValueType {
     NUMBER,
     STRING,
     BOOLEAN,
     FUNCTION,
+    CLASS,      // Represents the class definition itself
+    INSTANCE,   // Represents an instance of a class
     LIST,
     DICTIONARY,
     VOID,
@@ -30,14 +33,22 @@ struct Symbol {
         : name(n), type(t), isFunction(isFunc), returnType(ValueType::UNKNOWN) {}
 };
 
+// New structure to hold information about a class
+struct ClassSymbol : public Symbol {
+    std::unordered_map<std::string, std::unique_ptr<Symbol>> methods;
+
+    ClassSymbol(const std::string& n) : Symbol(n, ValueType::CLASS, false) {}
+};
+
+
 class Scope {
 public:
-    std::unordered_map<std::string, Symbol> symbols;
+    std::unordered_map<std::string, std::unique_ptr<Symbol>> symbols;
     Scope* parent;
 
     Scope(Scope* p = nullptr) : parent(p) {}
 
-    void define(const std::string& name, ValueType type, bool isFunction = false);
+    void define(const std::string& name, std::unique_ptr<Symbol> symbol);
     Symbol* lookup(const std::string& name);
     bool exists(const std::string& name);
 };
@@ -49,6 +60,7 @@ private:
     ValueType currentFunctionReturnType;
     bool inFunction;
     int loopDepth;
+    ClassSymbol* currentClass = nullptr; // Track the current class context
 
     void enterScope();
     void exitScope();
@@ -64,10 +76,13 @@ private:
     ValueType analyzeListLiteral(ListLiteral* expr);
     ValueType analyzeIndexExpression(IndexExpression* expr);
     ValueType analyzeDictLiteral(DictLiteral* expr);
+    ValueType analyzeMemberExpression(MemberExpression* expr); // Added
+    ValueType analyzeNewExpression(CallExpression* expr); // Added for 'new'
 
     void analyzeVariableDeclaration(VariableDeclaration* stmt);
     void analyzeAssignment(Assignment* stmt);
     void analyzeFunctionDeclaration(FunctionDeclaration* stmt);
+    void analyzeClassDeclaration(ClassDeclaration* stmt); // Added
     void analyzeIfStatement(IfStatement* stmt);
     void analyzeWhileStatement(WhileStatement* stmt);
     void analyzeRepeatStatement(RepeatStatement* stmt);
@@ -75,7 +90,6 @@ private:
     void analyzeBreakStatement(BreakStatement* stmt);
     void analyzeContinueStatement(ContinueStatement* stmt);
     void analyzeExpressionStatement(ExpressionStatement* stmt);
-    // This was the missing line
     void analyzeTryStatement(TryStatement* stmt);
 
     bool isCompatible(ValueType expected, ValueType actual);

@@ -38,6 +38,7 @@ void VirtualMachine::reset() {
     while (!callStack.empty()) callStack.pop();
     globalVars.clear();
     functions.clear();
+    classes.clear();
     pc = 0;
     running = false;
 }
@@ -61,6 +62,19 @@ Value VirtualMachine::peek() {
     }
     return stack.top();
 }
+
+// Function to peek deeper into the stack
+Value VirtualMachine::peek(int distance) {
+    if (stack.size() < distance + 1) {
+        throw std::runtime_error("Stack underflow on peek.");
+    }
+    std::stack<Value> temp = stack;
+    for (int i = 0; i < distance; i++) {
+        temp.pop();
+    }
+    return temp.top();
+}
+
 
 void VirtualMachine::setVariable(const std::string& name, const Value& value) {
     if (!callStack.empty()) {
@@ -88,6 +102,28 @@ Value VirtualMachine::getVariable(const std::string& name) {
     }
 
     throw std::runtime_error("Undefined variable: " + name);
+}
+
+void VirtualMachine::callFunction(Function& func, int argCount) {
+    CallFrame frame(pc);
+
+    std::vector<Value> args;
+    for (int i = 0; i < argCount; i++) {
+        args.push_back(pop());
+    }
+
+    if (func.isMethod) {
+        frame.self = std::get<std::shared_ptr<OkerInstance>>(pop());
+    }
+
+    for (size_t i = 0; i < func.parameters.size(); i++) {
+        if (i < args.size()) {
+            frame.localVars[func.parameters[i]] = args[argCount - 1 - i];
+        }
+    }
+
+    callStack.push(frame);
+    pc = func.address - 1;
 }
 
 void VirtualMachine::executeInstruction(const Instruction& instr) {
@@ -185,7 +221,14 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
                 params.push_back(instr.operands[i]);
             }
 
-            functions[name] = Function(name, address, params);
+            size_t dotPos = name.find('.');
+            if (dotPos != std::string::npos) {
+                std::string className = name.substr(0, dotPos);
+                std::string methodName = name.substr(dotPos + 1);
+                classes.at(className)->methods[methodName] = Function(methodName, address, params, true);
+            } else {
+                functions[name] = Function(name, address, params);
+            }
             break;
         }
 
@@ -193,30 +236,26 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
             std::string funcName = instr.operands[0];
             int argCount = std::stoi(instr.operands[1]);
 
-            auto it = functions.find(funcName);
-            if (it == functions.end()) {
-                throw std::runtime_error("Undefined function: " + funcName);
-            }
+            Value calleeContext = peek(argCount); 
 
-            Function& func = it->second;
-            CallFrame frame(pc);
-
-            std::vector<Value> args;
-            for (int i = 0; i < argCount; i++) {
-                args.push_back(pop());
-            }
-
-            for (size_t i = 0; i < func.parameters.size(); i++) {
-                if (i < args.size()) {
-                    frame.localVars[func.parameters[i]] = args[argCount - 1 - i];
+            if (std::holds_alternative<std::shared_ptr<OkerInstance>>(calleeContext)) {
+                auto instance = std::get<std::shared_ptr<OkerInstance>>(calleeContext);
+                auto it = instance->klass->methods.find(funcName);
+                if (it == instance->klass->methods.end()) {
+                    throw std::runtime_error("Undefined method '" + funcName + "' on class " + instance->klass->name);
                 }
+                callFunction(it->second, argCount);
+            } else {
+                auto it = functions.find(funcName);
+                if (it == functions.end()) {
+                    throw std::runtime_error("Cannot call non-function: " + funcName);
+                }
+                callFunction(it->second, argCount);
             }
-
-            callStack.push(frame);
-            pc = func.address - 1;
             break;
         }
 
+        // CORRECTED RETURN LOGIC
         case OpCode::RETURN: {
             Value returnValue = pop();
 
@@ -224,8 +263,15 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
                 throw std::runtime_error("Return outside function");
             }
 
+            bool wasMethod = callStack.top().self != nullptr;
+
             int returnAddr = callStack.top().returnAddress;
             callStack.pop();
+
+            // If the call was a method, pop the instance ('this') from the stack
+            if (wasMethod) {
+                pop(); 
+            }
 
             push(returnValue);
             pc = returnAddr;
@@ -245,7 +291,7 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
             for (int i = 0; i < elementCount; ++i) {
                 list->elements.push_back(pop());
             }
-            // std::reverse(list->elements.begin(), list->elements.end());
+            std::reverse(list->elements.begin(), list->elements.end());
             push(Value(list));
             break;
         }
@@ -305,8 +351,69 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
             } else {
                  throw std::runtime_error("Cannot set index on a non-list/non-dictionary type.");
             }
+            push(newValue);
             break;
         }
+
+        case OpCode::DEFINE_CLASS: {
+            classes[instr.operands[0]] = std::make_shared<OkerClass>(instr.operands[0]);
+            break;
+        }
+        case OpCode::CREATE_INSTANCE: {
+            std::string className = instr.operands[0];
+            int argCount = std::stoi(instr.operands[1]);
+
+            auto it = classes.find(className);
+            if (it == classes.end()) {
+                throw std::runtime_error("Class '" + className + "' not defined.");
+            }
+
+            auto instance = std::make_shared<OkerInstance>(it->second);
+            push(Value(instance));
+
+            auto ctor_it = it->second->methods.find(className);
+            if (ctor_it != it->second->methods.end()) {
+                callFunction(ctor_it->second, argCount);
+            }
+            break;
+        }
+        case OpCode::GET_PROPERTY: {
+            Value objectVal = pop();
+             if (!std::holds_alternative<std::shared_ptr<OkerInstance>>(objectVal)) {
+                throw std::runtime_error("Can only get properties of instances.");
+            }
+            auto instance = std::get<std::shared_ptr<OkerInstance>>(objectVal);
+            auto it = instance->fields.find(instr.operands[0]);
+            if (it != instance->fields.end()) {
+                push(it->second);
+            } else {
+                 auto method_it = instance->klass->methods.find(instr.operands[0]);
+                if (method_it == instance->klass->methods.end()) {
+                    throw std::runtime_error("Undefined property '" + instr.operands[0] + "' on instance of " + instance->klass->name);
+                }
+                push(objectVal);
+            }
+            break;
+        }
+        case OpCode::SET_PROPERTY: {
+            Value value = pop();
+            Value objectVal = pop();
+            if (!std::holds_alternative<std::shared_ptr<OkerInstance>>(objectVal)) {
+                throw std::runtime_error("Can only set properties on instances.");
+            }
+            auto instance = std::get<std::shared_ptr<OkerInstance>>(objectVal);
+            instance->fields[instr.operands[0]] = value;
+            push(value);
+            break;
+        }
+        case OpCode::GET_THIS: {
+            if (callStack.empty() || !callStack.top().self) {
+                throw std::runtime_error("'this' can only be used inside a method.");
+            }
+            push(Value(callStack.top().self));
+            break;
+        }
+
 
         case OpCode::POP:
             pop();
@@ -438,7 +545,7 @@ void VirtualMachine::executeBuiltinCall(const std::string& name, int argCount) {
     for (int i = 0; i < argCount; i++) {
         args.push_back(pop());
     }
-    // std::reverse(args.begin(), args.end());
+    std::reverse(args.begin(), args.end());
     push(builtins->call(name, args, *this));
 }
 
@@ -475,6 +582,12 @@ std::string VirtualMachine::valueToString(const Value& value) {
         }
         result += "}";
         return result;
+    } else if (std::holds_alternative<std::shared_ptr<OkerInstance>>(value)) {
+        auto instance = std::get<std::shared_ptr<OkerInstance>>(value);
+        return instance->klass->name + " instance";
+    } else if (std::holds_alternative<std::shared_ptr<OkerClass>>(value)) {
+        auto klass = std::get<std::shared_ptr<OkerClass>>(value);
+        return "class " + klass->name;
     }
     return "nil";
 }
