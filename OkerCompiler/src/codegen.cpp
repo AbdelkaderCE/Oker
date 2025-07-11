@@ -30,9 +30,6 @@ void CodeGenerator::generateStatement(Statement* stmt) {
         case NodeType::FUNCTION_DECLARATION:
             generateFunctionDeclaration(static_cast<FunctionDeclaration*>(stmt));
             break;
-        case NodeType::CLASS_DECLARATION:
-            generateClassDeclaration(static_cast<ClassDeclaration*>(stmt));
-            break;
         case NodeType::IF_STATEMENT:
             generateIfStatement(static_cast<IfStatement*>(stmt));
             break;
@@ -85,12 +82,6 @@ void CodeGenerator::generateTryStatement(TryStatement* stmt) {
 }
 
 void CodeGenerator::generateExpression(Expression* expr) {
-    CallExpression* callExpr = dynamic_cast<CallExpression*>(expr);
-    if (callExpr && callExpr->isNew) {
-        generateNewExpression(callExpr);
-        return;
-    }
-
     switch (expr->type) {
         case NodeType::NUMBER_LITERAL:
             generateNumberLiteral(static_cast<NumberLiteral*>(expr));
@@ -119,11 +110,9 @@ void CodeGenerator::generateExpression(Expression* expr) {
         case NodeType::INDEX_EXPRESSION:
             generateIndexExpression(static_cast<IndexExpression*>(expr));
             break;
+        // This case was missing, causing the linker error.
         case NodeType::DICT_LITERAL:
             generateDictLiteral(static_cast<DictLiteral*>(expr));
-            break;
-        case NodeType::MEMBER_EXPRESSION: 
-            generateMemberExpression(static_cast<MemberExpression*>(expr));
             break;
         default:
             break;
@@ -171,51 +160,41 @@ void CodeGenerator::generateUnaryExpression(UnaryExpression* expr) {
     }
 }
 
-// CORRECTED CALL GENERATION
 void CodeGenerator::generateCallExpression(CallExpression* expr) {
-    // First, generate code for all arguments and push them onto the stack.
     for (auto it = expr->arguments.rbegin(); it != expr->arguments.rend(); ++it) {
         generateExpression(it->get());
     }
 
-    // Next, generate the code for the callee. This is the crucial part.
-    // If it's a method call (`instance.method`), this will execute GET_PROPERTY,
-    // which leaves the instance on the stack.
-    // If it's a global function, this does nothing extra.
-    generateExpression(expr->callee.get());
-
-    // Finally, emit the CALL instruction. The VM will find the instance
-    // on the stack right below the arguments.
-    std::string funcName;
     if (expr->callee->type == NodeType::IDENTIFIER) {
-        funcName = static_cast<Identifier*>(expr->callee.get())->name;
-    } else if (expr->callee->type == NodeType::MEMBER_EXPRESSION) {
-        funcName = static_cast<MemberExpression*>(expr->callee.get())->property->name;
+        Identifier* callee = static_cast<Identifier*>(expr->callee.get());
+
+        if (callee->name == "say" || callee->name == "input" || 
+            callee->name == "str" || callee->name == "num" || 
+            callee->name == "bool" || callee->name == "len" ||
+            callee->name == "type" || callee->name == "abs" ||
+            callee->name == "max" || callee->name == "min" ||
+            callee->name == "round" || callee->name == "sqrt" ||
+            callee->name == "pow" || callee->name == "random" ||
+            callee->name == "upper" || callee->name == "lower" ||
+            callee->name == "strip" || callee->name == "split_str" ||
+            callee->name == "replace_str" ||callee->name == "charAt" || 
+            callee->name == "sbuild_new" ||
+            callee->name == "sbuild_add" || callee->name == "sbuild_get" ||
+            callee->name == "list_add" ||
+            callee->name == "exists" || callee->name == "listdir" ||
+            callee->name == "exit" || callee->name == "sleep" ||
+            callee->name == "get" || callee->name == "save" ||
+            callee->name == "deletef") {
+
+            emit(OpCode::BUILTIN_CALL, {callee->name, std::to_string(expr->arguments.size())});
+        } else {
+            emit(OpCode::CALL, {callee->name, std::to_string(expr->arguments.size())});
+        }
     }
-
-    emit(OpCode::CALL, {funcName, std::to_string(expr->arguments.size())});
-}
-
-void CodeGenerator::generateNewExpression(CallExpression* expr) {
-    Identifier* className = static_cast<Identifier*>(expr->callee.get());
-    for (auto it = expr->arguments.rbegin(); it != expr->arguments.rend(); ++it) {
-        generateExpression(it->get());
-    }
-    emit(OpCode::CREATE_INSTANCE, {className->name, std::to_string(expr->arguments.size())});
-}
-
-void CodeGenerator::generateMemberExpression(MemberExpression* expr) {
-    generateExpression(expr->object.get());
-    emit(OpCode::GET_PROPERTY, expr->property->name);
 }
 
 void CodeGenerator::generateIdentifier(Identifier* expr) {
-    if (expr->name == "this") {
-        emit(OpCode::GET_THIS);
-    } else {
-        // If an identifier is not 'this', it must be a variable.
-        emit(OpCode::GET_VAR, expr->name);
-    }
+    emit(OpCode::GET_VAR, expr->name);
 }
 
 void CodeGenerator::generateNumberLiteral(NumberLiteral* expr) {
@@ -231,13 +210,16 @@ void CodeGenerator::generateBooleanLiteral(BooleanLiteral* expr) {
 }
 
 void CodeGenerator::generateListLiteral(ListLiteral* expr) {
+    // Generate code for each element in reverse order
     for (auto it = expr->elements.rbegin(); it != expr->elements.rend(); ++it) {
         generateExpression(it->get());
     }
+    // Emit the instruction to build the list from the stack
     emit(OpCode::BUILD_LIST, std::to_string(expr->elements.size()));
 }
 
 void CodeGenerator::generateIndexExpression(IndexExpression* expr) {
+    // Correct, consistent order: object first, then index.
     generateExpression(expr->object.get());
     generateExpression(expr->index.get());
     emit(OpCode::GET_INDEX);
@@ -254,19 +236,22 @@ void CodeGenerator::generateVariableDeclaration(VariableDeclaration* stmt) {
 }
 
 void CodeGenerator::generateAssignment(Assignment* stmt) {
-    generateExpression(stmt->value.get());
-    if (stmt->target->type == NodeType::IDENTIFIER) {
-        Identifier* target = static_cast<Identifier*>(stmt->target.get());
-        emit(OpCode::ASSIGN_VAR, target->name);
-    } else if (stmt->target->type == NodeType::MEMBER_EXPRESSION) {
-        MemberExpression* target = static_cast<MemberExpression*>(stmt->target.get());
-        generateExpression(target->object.get());
-        emit(OpCode::SET_PROPERTY, target->property->name);
-    } else if (stmt->target->type == NodeType::INDEX_EXPRESSION) {
+    if (stmt->target->type == NodeType::INDEX_EXPRESSION) {
         IndexExpression* target = static_cast<IndexExpression*>(stmt->target.get());
-        generateExpression(target->index.get());
+
+        // Correct, consistent order: object, then index, then the new value.
         generateExpression(target->object.get());
+        generateExpression(target->index.get());
+        generateExpression(stmt->value.get());
+
         emit(OpCode::SET_INDEX);
+    } else {
+        // Handle regular variable assignment
+        generateExpression(stmt->value.get());
+        if (stmt->target->type == NodeType::IDENTIFIER) {
+            Identifier* target = static_cast<Identifier*>(stmt->target.get());
+            emit(OpCode::ASSIGN_VAR, target->name);
+        }
     }
 }
 
@@ -294,19 +279,6 @@ void CodeGenerator::generateFunctionDeclaration(FunctionDeclaration* stmt) {
     }
     emit(OpCode::DEFINE_FUNCTION, operands);
 }
-
-void CodeGenerator::generateClassDeclaration(ClassDeclaration* stmt) {
-    emit(OpCode::DEFINE_CLASS, stmt->name);
-    for (const auto& methodNode : stmt->methods) {
-        std::string originalName = methodNode->name;
-        methodNode->name = stmt->name + "." + originalName;
-
-        generateFunctionDeclaration(methodNode.get());
-
-        methodNode->name = originalName;
-    }
-}
-
 
 void CodeGenerator::generateIfStatement(IfStatement* stmt) {
     std::string elseLabel = generateLabel();
@@ -519,11 +491,6 @@ std::string CodeGenerator::opcodeToString(OpCode opcode) {
         case OpCode::DECREMENT: return "DECREMENT";
         case OpCode::TRY_START: return "TRY_START";
         case OpCode::TRY_END: return "TRY_END";
-        case OpCode::DEFINE_CLASS: return "DEFINE_CLASS";
-        case OpCode::CREATE_INSTANCE: return "CREATE_INSTANCE";
-        case OpCode::GET_PROPERTY: return "GET_PROPERTY";
-        case OpCode::SET_PROPERTY: return "SET_PROPERTY";
-        case OpCode::GET_THIS: return "GET_THIS";
         default: return "UNKNOWN";
     }
 }

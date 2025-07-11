@@ -9,7 +9,6 @@
 class ASTNode;
 class Expression;
 class Statement;
-class FunctionDeclaration; // Forward declare FunctionDeclaration
 
 // AST Node types
 enum class NodeType {
@@ -17,20 +16,20 @@ enum class NodeType {
     VARIABLE_DECLARATION,
     ASSIGNMENT,
     FUNCTION_DECLARATION,
-    CLASS_DECLARATION, 
+    CLASS_DECLARATION,
     IF_STATEMENT,
     WHILE_STATEMENT,
     REPEAT_STATEMENT,
     RETURN_STATEMENT,
     BREAK_STATEMENT,
     CONTINUE_STATEMENT,
-    TRY_STATEMENT,
+    TRY_STATEMENT, 
     EXPRESSION_STATEMENT,
     BLOCK_STATEMENT,
     BINARY_EXPRESSION,
     UNARY_EXPRESSION,
     CALL_EXPRESSION,
-    MEMBER_EXPRESSION, 
+    MEMBER_EXPRESSION,
     INDEX_EXPRESSION,
     IDENTIFIER,
     NUMBER_LITERAL,
@@ -160,20 +159,9 @@ class CallExpression : public Expression {
 public:
     std::unique_ptr<Expression> callee;
     std::vector<std::unique_ptr<Expression>> arguments;
-    bool isNew; // Flag to mark a 'new' expression
 
-    CallExpression(std::unique_ptr<Expression> c, bool is_new = false, int l = 0, int col = 0)
-        : Expression(NodeType::CALL_EXPRESSION, l, col), callee(std::move(c)), isNew(is_new) {}
-    void print(int indent = 0) const override;
-};
-
-class MemberExpression : public Expression {
-public:
-    std::unique_ptr<Expression> object;
-    std::unique_ptr<Identifier> property;
-
-    MemberExpression(std::unique_ptr<Expression> obj, std::unique_ptr<Identifier> prop, int l = 0, int c = 0)
-        : Expression(NodeType::MEMBER_EXPRESSION, l, c), object(std::move(obj)), property(std::move(prop)) {}
+    CallExpression(std::unique_ptr<Expression> c, int l = 0, int col = 0)
+        : Expression(NodeType::CALL_EXPRESSION, l, col), callee(std::move(c)) {}
     void print(int indent = 0) const override;
 };
 
@@ -205,17 +193,6 @@ public:
 
     FunctionDeclaration(const std::string& n, int l = 0, int c = 0)
         : Statement(NodeType::FUNCTION_DECLARATION, l, c), name(n) {}
-    void print(int indent = 0) const override;
-};
-
-class ClassDeclaration : public Statement {
-public:
-    std::string name;
-    std::vector<std::unique_ptr<FunctionDeclaration>> methods;
-
-    // Takes r-value reference to avoid copying vector of unique_ptrs
-    ClassDeclaration(const std::string& n, std::vector<std::unique_ptr<FunctionDeclaration>>&& m, int l = 0, int c = 0)
-        : Statement(NodeType::CLASS_DECLARATION, l, c), name(n), methods(std::move(m)) {}
     void print(int indent = 0) const override;
 };
 
@@ -323,7 +300,6 @@ private:
     std::unique_ptr<Statement> whileStatement();
     std::unique_ptr<Statement> repeatStatement();
     std::unique_ptr<Statement> functionDeclaration();
-    std::unique_ptr<Statement> classDeclaration(); 
     std::unique_ptr<Statement> returnStatement();
     std::unique_ptr<Statement> breakStatement();
     std::unique_ptr<Statement> continueStatement();

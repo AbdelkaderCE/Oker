@@ -8,66 +8,42 @@
 #include <vector>
 #include <memory>
 
-// Forward declare classes to break include cycles
+// Forward declare the BuiltinFunctions class to break the include cycle.
 class BuiltinFunctions;
 struct Value;
-struct OkerInstance;
-struct Function; 
 
 // A struct to represent a list in Oker.
 struct OkerList {
     std::vector<Value> elements;
 };
 struct OkerDict {
+    // A dictionary is a map from a string key to any Oker Value
     std::unordered_map<std::string, Value> pairs;
 };
 
-// Represents the blueprint of a class
-struct OkerClass {
-    std::string name;
-    std::unordered_map<std::string, Function> methods;
-
-    OkerClass(const std::string& n) : name(n) {}
-};
-
-// Represents an instance of a class
-struct OkerInstance {
-    std::shared_ptr<OkerClass> klass;
-    std::unordered_map<std::string, Value> fields;
-
-    OkerInstance(std::shared_ptr<OkerClass> k) : klass(k) {}
-};
-
-
 // The single, authoritative definition of a Value in Oker.
-struct Value : public std::variant<
-    double, 
-    std::string, 
-    bool, 
-    std::shared_ptr<OkerList>, 
-    std::shared_ptr<OkerDict>,
-    std::shared_ptr<OkerClass>,     
-    std::shared_ptr<OkerInstance>   
-> {
+// It is a struct that inherits from std::variant to allow forward declaration.
+struct Value : public std::variant<double, std::string, bool, std::shared_ptr<OkerList>, std::shared_ptr<OkerDict>> {
+    // Inherit constructors from std::variant
     using variant::variant;
 };
+
+
 
 struct Function {
     std::string name;
     int address;
     std::vector<std::string> parameters;
-    bool isMethod = false;
 
     Function() : name(""), address(0), parameters() {}
 
-    Function(const std::string& n, int addr, const std::vector<std::string>& params, bool is_method = false)
-        : name(n), address(addr), parameters(params), isMethod(is_method) {}
+    Function(const std::string& n, int addr, const std::vector<std::string>& params)
+        : name(n), address(addr), parameters(params) {}
 };
 
 struct CallFrame {
     int returnAddress;
     std::unordered_map<std::string, Value> localVars;
-    std::shared_ptr<OkerInstance> self = nullptr;
 
     CallFrame(int retAddr) : returnAddress(retAddr) {}
 };
@@ -84,23 +60,22 @@ private:
     std::stack<CallFrame> callStack;
     std::unordered_map<std::string, Value> globalVars;
     std::unordered_map<std::string, Function> functions;
-    std::unordered_map<std::string, std::shared_ptr<OkerClass>> classes;
     std::stack<TryFrame> tryStack;
 
     int pc;
     bool running;
 
+    // Use a unique_ptr to the forward-declared class.
+    // This must come AFTER all other members that might be used in its destructor.
     std::unique_ptr<BuiltinFunctions> builtins;
 
     void push(const Value& value);
     Value pop();
     Value peek();
-    Value peek(int distance); // <--- THIS IS THE MISSING DECLARATION
     bool isEmpty();
 
     void setVariable(const std::string& name, const Value& value);
     Value getVariable(const std::string& name);
-    void callFunction(Function& func, int argCount);
 
     void executeInstruction(const Instruction& instr);
     void executeBinaryOp(OpCode opcode);
@@ -116,7 +91,7 @@ public:
     bool valueToBoolean(const Value& value);
 
     VirtualMachine();
-    ~VirtualMachine(); 
+    ~VirtualMachine(); // Required for unique_ptr to incomplete type
     void execute(const std::vector<Instruction>& bytecode);
     void reset();
 

@@ -12,7 +12,7 @@ enum class OpCode {
     PUSH_NUMBER,
     PUSH_STRING,
     PUSH_BOOLEAN,
-    PUSH_VARIABLE, // This seems unused, consider removing later
+    PUSH_VARIABLE,
 
     // Arithmetic operations
     ADD,
@@ -58,7 +58,7 @@ enum class OpCode {
     DUP,
     HALT,
 
-    // Loop operations (Note: These seem symbolic, actual loops use jumps)
+    // Loop operations
     LOOP_START,
     LOOP_END,
     REPEAT_START,
@@ -66,7 +66,7 @@ enum class OpCode {
     BREAK,
     CONTINUE,
 
-    // List and Dictionary operations
+    // List operations (New)
     BUILD_LIST,
     GET_INDEX,
     SET_INDEX,
@@ -78,14 +78,7 @@ enum class OpCode {
 
     // Error Handling
     TRY_START,
-    TRY_END,
-
-    // --- New Class-related Opcodes ---
-    DEFINE_CLASS,
-    CREATE_INSTANCE,
-    GET_PROPERTY,
-    SET_PROPERTY,
-    GET_THIS
+    TRY_END
 };
 
 struct Instruction {
@@ -125,13 +118,10 @@ private:
     void generateListLiteral(ListLiteral* expr);
     void generateIndexExpression(IndexExpression* expr);
     void generateDictLiteral(DictLiteral* expr);
-    void generateMemberExpression(MemberExpression* expr); // Added
-    void generateNewExpression(CallExpression* expr); // Added
 
     void generateVariableDeclaration(VariableDeclaration* stmt);
     void generateAssignment(Assignment* stmt);
     void generateFunctionDeclaration(FunctionDeclaration* stmt);
-    void generateClassDeclaration(ClassDeclaration* stmt); // Added
     void generateIfStatement(IfStatement* stmt);
     void generateWhileStatement(WhileStatement* stmt);
     void generateRepeatStatement(RepeatStatement* stmt);

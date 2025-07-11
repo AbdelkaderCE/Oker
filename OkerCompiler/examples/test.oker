@@ -1,36 +1,190 @@
-~ Class Implementation Test
+~ Comprehensive Oker Language Feature Test
+~ This script covers all major features of the Oker programming language.
 
-class Person:
-    makef Person(name, age):
-        this.name = name
-        this.age = age
-        say "A new person was born: " + this.name
+say "--- Oker Language Comprehensive Test ---"
+say ""
+
+~ --- 1. Variables and Basic Data Types ---
+say "--- 1. Variables and Basic Data Types ---"
+let my_number = 42
+let my_string = "Hello, Oker!"
+let my_boolean = true
+
+say "Number: " + str(my_number)
+say "String: " + my_string
+say "Boolean: " + str(my_boolean)
+
+let a = 15
+let b = 7
+say "Initial values: a = " + str(a) + ", b = " + str(b)
+say ""
+
+~ --- 2. Arithmetic and String Operations ---
+say "--- 2. Arithmetic and String Operations ---"
+let sum = a + b
+let difference = a - b
+let product = a * b
+let quotient = a / b
+let remainder = a % b
+let concatenated_string = "The sum is: " + str(sum)
+
+say "Sum (a + b): " + str(sum)
+say "Difference (a - b): " + str(difference)
+say "Product (a * b): " + str(product)
+say "Quotient (a / b): " + str(quotient)
+say "Remainder (a % b): " + str(remainder)
+say "String Concatenation: " + concatenated_string
+say ""
+
+~ --- 3. Control Flow: Conditionals ---
+say "--- 3. Control Flow: Conditionals ---"
+if sum > 20:
+    say "The sum is greater than 20."
+else:
+    say "The sum is not greater than 20."
+end
+
+if product == 105:
+    say "Product verification successful."
+end
+
+if not my_boolean:
+    say "This should not print."
+else:
+    say "Boolean logic (not) is working correctly."
+end
+say ""
+
+~ --- 4. Control Flow: Loops ---
+say "--- 4. Control Flow: Loops ---"
+
+say "While loop from 0 to 4:"
+let i = 0
+while i < 5:
+    say "  While loop iteration: " + str(i)
+    let i = i + 1  ~ This pattern should be optimized to INCREMENT
+end
+
+say "Repeat loop (3 times):"
+repeat 3:
+    say "  Repeat loop says hello!"
+end
+
+say "Loop with break and continue:"
+let j = 0
+while j < 10:
+    let j = j + 1
+    if j > 5:
+        break ~ Exit the loop after 5 iterations
     end
-
-    makef greet():
-        say "Hello, my name is " + this.name + " and I am " + str(this.age) + " years old."
+    if j == 3:
+        continue ~ Skip the 3rd iteration
     end
+    say "  Loop with break/continue, iteration: " + str(j)
+end
+say ""
 
-    makef haveBirthday():
-        this.age = this.age + 1
-        say "Happy birthday! I am now " + str(this.age) + "."
+~ --- 5. Functions ---
+say "--- 5. Functions ---"
+makef factorial(n):
+    if n <= 1:
+        return 1
+    else:
+        return n * factorial(n - 1)
     end
 end
 
-say "--- Class Test Running ---"
-say "Creating a new person..."
-let alice = new Person("Alice", 30)
+let fact_5 = factorial(5)
+say "Factorial of 5 is: " + str(fact_5)
 
-say ""
-say "Calling methods..."
-alice.greet()
-alice.haveBirthday()
-alice.greet()
+makef greet(name, message):
+    say "Function call: " + name + ", " + message + "!"
+end
 
+greet("Alice", "Good morning")
 say ""
-say "Accessing properties directly:"
-say "Name: " + alice.name
-alice.age = 35 ~ Modifying a public property
-say "New age: " + str(alice.age)
-alice.greet()
-say "--- Class Test Finished ---"
+
+
+~ --- 6. Data Structures: Lists and Dictionaries ---
+say "--- 6. Data Structures: Lists and Dictionaries ---"
+let my_list = [10, "apple", true, 3.14]
+say "Initial list: " + str(my_list)
+
+let my_dict = {"name": "Bob", "age": 30, "isStudent": false}
+say "Initial dictionary: " + str(my_dict)
+
+~ Modify and access data structures
+my_list[1] = "banana"
+say "Modified list: " + str(my_list)
+say "Accessing list item by index (my_list[1]): " + my_list[1]
+
+my_dict["age"] = 31
+say "Modified dictionary: " + str(my_dict)
+say "Accessing dictionary item by key (my_dict[\"age\"]): " + str(my_dict["age"])
+say ""
+
+~ --- 7. Nested Data Structures ---
+say "--- 7. Nested Data Structures ---"
+let records = [
+    {"id": 1, "name": "Alice", "tags": ["a", "b"]},
+    {"id": 2, "name": "Bob", "tags": ["c", "d"]},
+]
+say "Nested data structure: " + str(records)
+say "Accessing nested data: " + records[0]["name"]
+say ""
+
+
+~ --- 8. Built-in Functions ---
+say "--- 8. Built-in Functions ---"
+say "len(\"Oker\"): " + str(len("Oker"))
+say "upper(\"test\"): " + upper("test")
+say "lower(\"TEST\"): " + lower("TEST")
+say "type(123): " + type(123)
+say "str(true): " + str(true)
+say "num(\"3.14\"): " + str(num("3.14"))
+say "abs(-10): " + str(abs(-10))
+say ""
+
+~ --- 9. File I/O ---
+say "--- 9. File I/O ---"
+let test_filename = "test_file.txt"
+let file_content = "Hello from Oker file I/O!"
+
+~ Save to a file
+save (test_filename, file_content)
+say "Saved content to " + test_filename
+
+~ Check if file exists
+if exists(test_filename):
+    say "File '" + test_filename + "' exists."
+else:
+    say "File '" + test_filename + "' does not exist. (Error)"
+end
+
+~ Read from the file
+let read_content = get (test_filename)
+say "Read content from file: " + read_content
+
+~ Delete the file
+deletef (test_filename)
+say "Deleted file: " + test_filename
+
+if not exists(test_filename):
+    say "File '" + test_filename + "' no longer exists. (Success)"
+else:
+    say "File '" + test_filename + "' still exists. (Error)"
+end
+say ""
+
+~ --- 10. Error Handling ---
+say "--- 10. Error Handling ---"
+try:
+    say "Attempting to divide by zero..."
+    let result = 10 / 0
+    say "This should not be printed."
+fail:
+    say "Caught an error as expected. Error handling is working."
+end
+say ""
+
+say "--- Oker Language Comprehensive Test Finished ---"
