@@ -38,7 +38,7 @@ end
 
 ~ Test iterative version
 say "\nIterative Fibonacci:"
-let n = 20
+let n = 35
 let result = fibonacci_iter(n)
 say "F(" + str(n) + ") = " + str(result)
 

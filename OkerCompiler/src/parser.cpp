@@ -283,11 +283,14 @@ std::unique_ptr<Statement> Parser::ifStatement() {
         skipNewlines();
     }
     if (match(TokenType::ELSE)) {
-        if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after else", peek()));
-        skipNewlines();
-        while (!check(TokenType::END) && !isAtEnd()) {
-            ifStmt->elseBranch.push_back(statement());
+        if (match(TokenType::COLON)) {
             skipNewlines();
+            while (!check(TokenType::END) && !isAtEnd()) {
+                ifStmt->elseBranch.push_back(statement());
+                skipNewlines();
+            }
+        } else { // Handles 'else if'
+            ifStmt->elseBranch.push_back(ifStatement());
         }
     }
     if (!match(TokenType::END)) throw std::runtime_error(format_error("Expected 'end' to close 'if'", peek()));
@@ -458,6 +461,7 @@ std::unique_ptr<Expression> Parser::call() {
     }
     return expr;
 }
+
 std::unique_ptr<Expression> Parser::primary() {
     if (match(TokenType::BOOLEAN)) return std::make_unique<BooleanLiteral>(tokens[current - 1].value == "true");
     if (match(TokenType::NUMBER)) return std::make_unique<NumberLiteral>(std::stod(tokens[current - 1].value));
@@ -472,9 +476,13 @@ std::unique_ptr<Expression> Parser::primary() {
 
     if (match(TokenType::LBRACKET)) {
         std::vector<std::unique_ptr<Expression>> elements;
+        skipNewlines();
         if (!check(TokenType::RBRACKET)) {
             do {
+                skipNewlines();
+                if (check(TokenType::RBRACKET)) break; // Handles trailing comma
                 elements.push_back(expression());
+                skipNewlines();
             } while (match(TokenType::COMMA));
         }
         if (!match(TokenType::RBRACKET)) throw std::runtime_error(format_error("Expected ']' after list elements", peek()));
@@ -484,11 +492,15 @@ std::unique_ptr<Expression> Parser::primary() {
     if (match(TokenType::LBRACE)) {
         std::vector<std::unique_ptr<Expression>> keys;
         std::vector<std::unique_ptr<Expression>> values;
+        skipNewlines();
         if (!check(TokenType::RBRACE)) {
             do {
-                keys.push_back(expression());
+                skipNewlines();
+                if (check(TokenType::RBRACE)) break; // Handles trailing comma
+                keys.push_back(primary());
                 if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after dictionary key", peek()));
                 values.push_back(expression());
+                skipNewlines();
             } while (match(TokenType::COMMA));
         }
         if (!match(TokenType::RBRACE)) throw std::runtime_error(format_error("Expected '}' to close dictionary", peek()));
