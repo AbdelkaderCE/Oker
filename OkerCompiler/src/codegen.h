@@ -74,7 +74,11 @@ enum class OpCode {
 
     // Optimized Opcodes
     INCREMENT,
-    DECREMENT
+    DECREMENT,
+
+    // Error Handling
+    TRY_START,
+    TRY_END
 };
 
 struct Instruction {
@@ -125,6 +129,7 @@ private:
     void generateBreakStatement(BreakStatement* stmt);
     void generateContinueStatement(ContinueStatement* stmt);
     void generateExpressionStatement(ExpressionStatement* stmt);
+    void generateTryStatement(TryStatement* stmt);
 
     void emit(OpCode opcode);
     void emit(OpCode opcode, const std::string& operand);

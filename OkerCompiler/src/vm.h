@@ -48,6 +48,11 @@ struct CallFrame {
     CallFrame(int retAddr) : returnAddress(retAddr) {}
 };
 
+struct TryFrame {
+    int failAddress;
+    size_t stackSize;
+};
+
 class VirtualMachine {
 private:
     std::vector<Instruction> instructions;
@@ -55,6 +60,7 @@ private:
     std::stack<CallFrame> callStack;
     std::unordered_map<std::string, Value> globalVars;
     std::unordered_map<std::string, Function> functions;
+    std::stack<TryFrame> tryStack;
 
     int pc;
     bool running;

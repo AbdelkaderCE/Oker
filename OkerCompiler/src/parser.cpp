@@ -42,7 +42,7 @@ void ListLiteral::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "ListLiteral:\n";
     std::cout << indent(indentLevel + 1) << "Elements:\n";
     for (const auto& elem : elements) {
-        elem->print(indentLevel + 2);
+        if (elem) elem->print(indentLevel + 2);
     }
 }
 
@@ -51,43 +51,43 @@ void DictLiteral::print(int indentLevel) const {
     for (size_t i = 0; i < keys.size(); ++i) {
         std::cout << indent(indentLevel + 1) << "Pair " << i << ":\n";
         std::cout << indent(indentLevel + 2) << "Key:\n";
-        keys[i]->print(indentLevel + 3);
+        if (keys[i]) keys[i]->print(indentLevel + 3);
         std::cout << indent(indentLevel + 2) << "Value:\n";
-        values[i]->print(indentLevel + 3);
+        if (values[i]) values[i]->print(indentLevel + 3);
     }
 }
 
 void IndexExpression::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "IndexExpression:\n";
     std::cout << indent(indentLevel + 1) << "Object:\n";
-    object->print(indentLevel + 2);
+    if (object) object->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Index:\n";
-    index->print(indentLevel + 2);
+    if (index) index->print(indentLevel + 2);
 }
 
 void BinaryExpression::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "BinaryExpression:\n";
     std::cout << indent(indentLevel + 1) << "Left:\n";
-    left->print(indentLevel + 2);
+    if (left) left->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Operator: " << static_cast<int>(operator_) << "\n";
     std::cout << indent(indentLevel + 1) << "Right:\n";
-    right->print(indentLevel + 2);
+    if (right) right->print(indentLevel + 2);
 }
 
 void UnaryExpression::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "UnaryExpression:\n";
     std::cout << indent(indentLevel + 1) << "Operator: " << static_cast<int>(operator_) << "\n";
     std::cout << indent(indentLevel + 1) << "Operand:\n";
-    operand->print(indentLevel + 2);
+    if (operand) operand->print(indentLevel + 2);
 }
 
 void CallExpression::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "CallExpression:\n";
     std::cout << indent(indentLevel + 1) << "Callee:\n";
-    callee->print(indentLevel + 2);
+    if (callee) callee->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Arguments:\n";
     for (const auto& arg : arguments) {
-        arg->print(indentLevel + 2);
+        if (arg) arg->print(indentLevel + 2);
     }
 }
 
@@ -103,9 +103,9 @@ void VariableDeclaration::print(int indentLevel) const {
 void Assignment::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "Assignment:\n";
     std::cout << indent(indentLevel + 1) << "Target:\n";
-    target->print(indentLevel + 2);
+    if (target) target->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Value:\n";
-    value->print(indentLevel + 2);
+    if (value) value->print(indentLevel + 2);
 }
 
 void FunctionDeclaration::print(int indentLevel) const {
@@ -123,7 +123,7 @@ void FunctionDeclaration::print(int indentLevel) const {
 void IfStatement::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "IfStatement:\n";
     std::cout << indent(indentLevel + 1) << "Condition:\n";
-    condition->print(indentLevel + 2);
+    if (condition) condition->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Then:\n";
     for (const auto& stmt : thenBranch) {
         if(stmt) stmt->print(indentLevel + 2);
@@ -139,7 +139,7 @@ void IfStatement::print(int indentLevel) const {
 void WhileStatement::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "WhileStatement:\n";
     std::cout << indent(indentLevel + 1) << "Condition:\n";
-    condition->print(indentLevel + 2);
+    if (condition) condition->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Body:\n";
     for (const auto& stmt : body) {
         if(stmt) stmt->print(indentLevel + 2);
@@ -149,7 +149,7 @@ void WhileStatement::print(int indentLevel) const {
 void RepeatStatement::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "RepeatStatement:\n";
     std::cout << indent(indentLevel + 1) << "Count:\n";
-    count->print(indentLevel + 2);
+    if (count) count->print(indentLevel + 2);
     std::cout << indent(indentLevel + 1) << "Body:\n";
     for (const auto& stmt : body) {
         if(stmt) stmt->print(indentLevel + 2);
@@ -166,7 +166,7 @@ void ReturnStatement::print(int indentLevel) const {
 
 void ExpressionStatement::print(int indentLevel) const {
     std::cout << indent(indentLevel) << "ExpressionStatement:\n";
-    expression->print(indentLevel + 1);
+    if (expression) expression->print(indentLevel + 1);
 }
 
 void BreakStatement::print(int indentLevel) const {
@@ -220,24 +220,16 @@ bool Parser::isAtEnd() {
 }
 
 void Parser::skipNewlines() {
-    while (match(TokenType::NEWLINE) || match(TokenType::COMMENT)) {
-        // Skip newlines and comments
-    }
+    while (match(TokenType::NEWLINE) || match(TokenType::COMMENT)) {}
 }
 
 std::unique_ptr<Program> Parser::parse() {
     auto program = std::make_unique<Program>();
-
     skipNewlines();
-
     while (!isAtEnd()) {
-        auto stmt = statement();
-        if (stmt) {
-            program->statements.push_back(std::move(stmt));
-        }
+        program->statements.push_back(statement());
         skipNewlines();
     }
-
     return program;
 }
 
@@ -251,429 +243,230 @@ std::unique_ptr<Statement> Parser::statement() {
     if (check(TokenType::RETURN)) return returnStatement();
     if (check(TokenType::BREAK)) return breakStatement();
     if (check(TokenType::CONTINUE)) return continueStatement();
-    if (check(TokenType::TRY)) return tryStatement(); // **This is the critical fix**
+    if (check(TokenType::TRY)) return tryStatement();
 
-    if (check(TokenType::IDENTIFIER)) {
-        size_t savedPos = current;
-        advance();
-        if (match(TokenType::ASSIGN) || check(TokenType::LBRACKET)) {
-            current = savedPos;
-            return assignmentStatement();
-        }
-        current = savedPos;
+    auto expr = expression();
+    if (match(TokenType::ASSIGN)) {
+        auto value = expression();
+        return std::make_unique<Assignment>(std::move(expr), std::move(value));
     }
 
-    return expressionStatement();
+    return std::make_unique<ExpressionStatement>(std::move(expr));
 }
 
 std::unique_ptr<Statement> Parser::letStatement() {
-    Token letTok = advance(); // consume 'let'
-
-    if (!check(TokenType::IDENTIFIER)) {
-        throw std::runtime_error(format_error("Expected identifier after 'let'", letTok));
-    }
-
+    advance(); // consume 'let'
+    if (!check(TokenType::IDENTIFIER)) throw std::runtime_error(format_error("Expected identifier after 'let'", peek()));
     std::string name = advance().value;
-
-    if (!match(TokenType::ASSIGN)) {
-        throw std::runtime_error(format_error("Expected '=' after variable name", peek()));
-    }
-
+    if (!match(TokenType::ASSIGN)) throw std::runtime_error(format_error("Expected '=' after variable name", peek()));
     auto initializer = expression();
-
     return std::make_unique<VariableDeclaration>(name, std::move(initializer));
 }
 
 std::unique_ptr<Statement> Parser::sayStatement() {
     advance(); // consume 'say'
-
     auto expr = expression();
-
     auto callee = std::make_unique<Identifier>("say");
     auto call = std::make_unique<CallExpression>(std::move(callee));
     call->arguments.push_back(std::move(expr));
-
     return std::make_unique<ExpressionStatement>(std::move(call));
 }
 
 std::unique_ptr<Statement> Parser::ifStatement() {
-    Token ifTok = advance(); // consume 'if'
-
+    Token ifTok = advance();
     auto condition = expression();
-
-    if (!match(TokenType::COLON)) {
-        throw std::runtime_error(format_error("Expected ':' after if condition", peek()));
-    }
-
+    if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after if condition", peek()));
     skipNewlines();
-
     auto ifStmt = std::make_unique<IfStatement>(std::move(condition));
-
     while (!check(TokenType::ELSE) && !check(TokenType::END) && !isAtEnd()) {
+        ifStmt->thenBranch.push_back(statement());
         skipNewlines();
-        if (check(TokenType::ELSE) || check(TokenType::END) || isAtEnd()) break;
-
-        auto stmt = statement();
-        if (stmt) {
-            ifStmt->thenBranch.push_back(std::move(stmt));
-        }
     }
-
     if (match(TokenType::ELSE)) {
-        if (!match(TokenType::COLON)) {
-            throw std::runtime_error(format_error("Expected ':' after else", peek()));
-        }
+        if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after else", peek()));
         skipNewlines();
-
         while (!check(TokenType::END) && !isAtEnd()) {
+            ifStmt->elseBranch.push_back(statement());
             skipNewlines();
-            if (check(TokenType::END) || isAtEnd()) break;
-
-            auto stmt = statement();
-            if (stmt) {
-                ifStmt->elseBranch.push_back(std::move(stmt));
-            }
         }
     }
-
-    if (!match(TokenType::END)) {
-        throw std::runtime_error(format_error("Expected 'end' to close 'if' statement starting on line " + std::to_string(ifTok.line), peek()));
-    }
-
+    if (!match(TokenType::END)) throw std::runtime_error(format_error("Expected 'end' to close 'if'", peek()));
     return ifStmt;
 }
 
 std::unique_ptr<Statement> Parser::whileStatement() {
-    Token whileTok = advance(); // consume 'while'
-
+    advance(); // consume 'while'
     auto condition = expression();
-
-    if (!match(TokenType::COLON)) {
-        throw std::runtime_error(format_error("Expected ':' after while condition", peek()));
-    }
-
+    if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after while condition", peek()));
     skipNewlines();
-
     auto whileStmt = std::make_unique<WhileStatement>(std::move(condition));
-
     while (!check(TokenType::END) && !isAtEnd()) {
+        whileStmt->body.push_back(statement());
         skipNewlines();
-        if (check(TokenType::END) || isAtEnd()) break;
-
-        auto stmt = statement();
-        if (stmt) {
-            whileStmt->body.push_back(std::move(stmt));
-        }
     }
-
-    if (!match(TokenType::END)) {
-        throw std::runtime_error(format_error("Expected 'end' to close 'while' statement starting on line " + std::to_string(whileTok.line), peek()));
-    }
-
+    if (!match(TokenType::END)) throw std::runtime_error(format_error("Expected 'end' to close 'while'", peek()));
     return whileStmt;
 }
-
 std::unique_ptr<Statement> Parser::repeatStatement() {
-    Token repeatTok = advance(); // consume 'repeat'
-
+    advance(); // consume 'repeat'
     auto count = expression();
-
-    if (!match(TokenType::COLON)) {
-        throw std::runtime_error(format_error("Expected ':' after repeat count", peek()));
-    }
-
+    if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after repeat count", peek()));
     skipNewlines();
-
     auto repeatStmt = std::make_unique<RepeatStatement>(std::move(count));
-
     while (!check(TokenType::END) && !isAtEnd()) {
+        repeatStmt->body.push_back(statement());
         skipNewlines();
-        if (check(TokenType::END) || isAtEnd()) break;
-
-        auto stmt = statement();
-        if (stmt) {
-            repeatStmt->body.push_back(std::move(stmt));
-        }
     }
-
-    if (!match(TokenType::END)) {
-        throw std::runtime_error(format_error("Expected 'end' to close 'repeat' statement starting on line " + std::to_string(repeatTok.line), peek()));
-    }
-
+    if (!match(TokenType::END)) throw std::runtime_error(format_error("Expected 'end' to close 'repeat'", peek()));
     return repeatStmt;
 }
 
 std::unique_ptr<Statement> Parser::tryStatement() {
-    Token tryTok = advance(); // consume 'try'
-
-    if (!match(TokenType::COLON)) {
-        throw std::runtime_error(format_error("Expected ':' after 'try'", peek()));
-    }
+    advance(); // consume 'try'
+    if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after 'try'", peek()));
     skipNewlines();
-
     std::vector<std::unique_ptr<Statement>> tryBlock;
     while (!check(TokenType::FAIL) && !isAtEnd()) {
         tryBlock.push_back(statement());
         skipNewlines();
     }
-
-    if (!match(TokenType::FAIL)) {
-        throw std::runtime_error(format_error("Expected 'fail' block for 'try' statement", peek()));
-    }
-
-    if (!match(TokenType::COLON)) {
-        throw std::runtime_error(format_error("Expected ':' after 'fail'", peek()));
-    }
+    if (!match(TokenType::FAIL)) throw std::runtime_error(format_error("Expected 'fail' block", peek()));
+    if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after 'fail'", peek()));
     skipNewlines();
-
     std::vector<std::unique_ptr<Statement>> failBlock;
     while (!check(TokenType::END) && !isAtEnd()) {
         failBlock.push_back(statement());
         skipNewlines();
     }
-
-    if (!match(TokenType::END)) {
-        throw std::runtime_error(format_error("Expected 'end' to close 'try' statement", peek()));
-    }
-
+    if (!match(TokenType::END)) throw std::runtime_error(format_error("Expected 'end' to close 'try/fail'", peek()));
     return std::make_unique<TryStatement>(std::move(tryBlock), std::move(failBlock));
 }
 
-
 std::unique_ptr<Statement> Parser::functionDeclaration() {
-    Token makefTok = advance(); // consume 'makef'
-
-    if (!check(TokenType::IDENTIFIER)) {
-        throw std::runtime_error(format_error("Expected function name after 'makef'", peek()));
-    }
-
+    advance(); // consume 'makef'
+    if (!check(TokenType::IDENTIFIER)) throw std::runtime_error(format_error("Expected function name", peek()));
     std::string name = advance().value;
-
-    if (!match(TokenType::LPAREN)) {
-        throw std::runtime_error(format_error("Expected '(' after function name", peek()));
-    }
-
+    if (!match(TokenType::LPAREN)) throw std::runtime_error(format_error("Expected '(' after function name", peek()));
     auto funcDecl = std::make_unique<FunctionDeclaration>(name);
-
     if (!check(TokenType::RPAREN)) {
         do {
-            if (!check(TokenType::IDENTIFIER)) {
-                throw std::runtime_error(format_error("Expected parameter name", peek()));
-            }
+            if (!check(TokenType::IDENTIFIER)) throw std::runtime_error(format_error("Expected parameter name", peek()));
             funcDecl->parameters.push_back(advance().value);
         } while (match(TokenType::COMMA));
     }
-
-    if (!match(TokenType::RPAREN)) {
-        throw std::runtime_error(format_error("Expected ')' after parameters", peek()));
-    }
-
-    if (!match(TokenType::COLON)) {
-        throw std::runtime_error(format_error("Expected ':' after function signature", peek()));
-    }
-
+    if (!match(TokenType::RPAREN)) throw std::runtime_error(format_error("Expected ')' after parameters", peek()));
+    if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after function signature", peek()));
     skipNewlines();
-
     while (!check(TokenType::END) && !isAtEnd()) {
+        funcDecl->body.push_back(statement());
         skipNewlines();
-        if (check(TokenType::END) || isAtEnd()) break;
-
-        auto stmt = statement();
-        if (stmt) {
-            funcDecl->body.push_back(std::move(stmt));
-        }
     }
-
-    if (!match(TokenType::END)) {
-        throw std::runtime_error(format_error("Expected 'end' to close 'makef' statement starting on line " + std::to_string(makefTok.line), peek()));
-    }
-
+    if (!match(TokenType::END)) throw std::runtime_error(format_error("Expected 'end' to close function", peek()));
     return funcDecl;
 }
-
 std::unique_ptr<Statement> Parser::returnStatement() {
     advance(); // consume 'return'
-
     std::unique_ptr<Expression> value = nullptr;
     if (!check(TokenType::NEWLINE) && !check(TokenType::END) && !isAtEnd()) {
         value = expression();
     }
-
     return std::make_unique<ReturnStatement>(std::move(value));
 }
-
 std::unique_ptr<Statement> Parser::breakStatement() {
-    Token tok = advance(); // consume 'break'
+    Token tok = advance();
     return std::make_unique<BreakStatement>(tok.line, tok.column);
 }
-
 std::unique_ptr<Statement> Parser::continueStatement() {
-    Token tok = advance(); // consume 'continue'
+    Token tok = advance();
     return std::make_unique<ContinueStatement>(tok.line, tok.column);
 }
-
-std::unique_ptr<Statement> Parser::assignmentStatement() {
-    auto target = expression();
-
-    if (!match(TokenType::ASSIGN)) {
-        throw std::runtime_error(format_error("Expected '=' in assignment", peek()));
-    }
-
-    auto value = expression();
-
-    return std::make_unique<Assignment>(std::move(target), std::move(value));
-}
-
-std::unique_ptr<Statement> Parser::expressionStatement() {
-    auto expr = expression();
-    return std::make_unique<ExpressionStatement>(std::move(expr));
-}
-
-// Expression parsing methods
 std::unique_ptr<Expression> Parser::expression() {
     return logicalOr();
 }
-
 std::unique_ptr<Expression> Parser::logicalOr() {
     auto expr = logicalAnd();
-
     while (match(TokenType::OR)) {
-        TokenType op = tokens[current - 1].type;
-        auto right = logicalAnd();
-        expr = std::make_unique<BinaryExpression>(std::move(expr), op, std::move(right));
+        expr = std::make_unique<BinaryExpression>(std::move(expr), TokenType::OR, logicalAnd());
     }
-
     return expr;
 }
-
 std::unique_ptr<Expression> Parser::logicalAnd() {
     auto expr = equality();
-
     while (match(TokenType::AND)) {
-        TokenType op = tokens[current - 1].type;
-        auto right = equality();
-        expr = std::make_unique<BinaryExpression>(std::move(expr), op, std::move(right));
+        expr = std::make_unique<BinaryExpression>(std::move(expr), TokenType::AND, equality());
     }
-
     return expr;
 }
-
 std::unique_ptr<Expression> Parser::equality() {
     auto expr = comparison();
-
     while (match(TokenType::EQUAL) || match(TokenType::NOT_EQUAL)) {
         TokenType op = tokens[current - 1].type;
-        auto right = comparison();
-        expr = std::make_unique<BinaryExpression>(std::move(expr), op, std::move(right));
+        expr = std::make_unique<BinaryExpression>(std::move(expr), op, comparison());
     }
-
     return expr;
 }
-
 std::unique_ptr<Expression> Parser::comparison() {
     auto expr = addition();
-
-    while (match(TokenType::GREATER_THAN) || match(TokenType::GREATER_EQUAL) ||
-           match(TokenType::LESS_THAN) || match(TokenType::LESS_EQUAL)) {
+    while (match(TokenType::GREATER_THAN) || match(TokenType::GREATER_EQUAL) || match(TokenType::LESS_THAN) || match(TokenType::LESS_EQUAL)) {
         TokenType op = tokens[current - 1].type;
-        auto right = addition();
-        expr = std::make_unique<BinaryExpression>(std::move(expr), op, std::move(right));
+        expr = std::make_unique<BinaryExpression>(std::move(expr), op, addition());
     }
-
     return expr;
 }
-
 std::unique_ptr<Expression> Parser::addition() {
     auto expr = multiplication();
-
     while (match(TokenType::PLUS) || match(TokenType::MINUS)) {
         TokenType op = tokens[current - 1].type;
-        auto right = multiplication();
-        expr = std::make_unique<BinaryExpression>(std::move(expr), op, std::move(right));
+        expr = std::make_unique<BinaryExpression>(std::move(expr), op, multiplication());
     }
-
     return expr;
 }
-
 std::unique_ptr<Expression> Parser::multiplication() {
     auto expr = unary();
-
     while (match(TokenType::MULTIPLY) || match(TokenType::DIVIDE) || match(TokenType::MODULO)) {
         TokenType op = tokens[current - 1].type;
-        auto right = unary();
-        expr = std::make_unique<BinaryExpression>(std::move(expr), op, std::move(right));
+        expr = std::make_unique<BinaryExpression>(std::move(expr), op, unary());
     }
-
     return expr;
 }
-
 std::unique_ptr<Expression> Parser::unary() {
     if (match(TokenType::NOT) || match(TokenType::MINUS)) {
         TokenType op = tokens[current - 1].type;
-        auto right = unary();
-        return std::make_unique<UnaryExpression>(op, std::move(right));
+        return std::make_unique<UnaryExpression>(op, unary());
     }
-
     return call();
 }
-
 std::unique_ptr<Expression> Parser::call() {
     auto expr = primary();
-
     while (true) {
         if (match(TokenType::LPAREN)) {
-            auto call = std::make_unique<CallExpression>(std::move(expr));
-
+            auto callExpr = std::make_unique<CallExpression>(std::move(expr));
             if (!check(TokenType::RPAREN)) {
                 do {
-                    call->arguments.push_back(expression());
+                    callExpr->arguments.push_back(expression());
                 } while (match(TokenType::COMMA));
             }
-
-            if (!match(TokenType::RPAREN)) {
-                throw std::runtime_error(format_error("Expected ')' after arguments", peek()));
-            }
-
-            expr = std::move(call);
+            if (!match(TokenType::RPAREN)) throw std::runtime_error(format_error("Expected ')' after arguments", peek()));
+            expr = std::move(callExpr);
         } else if (match(TokenType::LBRACKET)) {
             auto index = expression();
-            if (!match(TokenType::RBRACKET)) {
-                throw std::runtime_error(format_error("Expected ']' after index", peek()));
-            }
+            if (!match(TokenType::RBRACKET)) throw std::runtime_error(format_error("Expected ']' after index", peek()));
             expr = std::make_unique<IndexExpression>(std::move(expr), std::move(index));
-        }
-        else {
+        } else {
             break;
         }
     }
-
     return expr;
 }
-
 std::unique_ptr<Expression> Parser::primary() {
-    if (match(TokenType::BOOLEAN)) {
-        bool value = tokens[current - 1].value == "true";
-        return std::make_unique<BooleanLiteral>(value);
-    }
-
-    if (match(TokenType::NUMBER)) {
-        double value = std::stod(tokens[current - 1].value);
-        return std::make_unique<NumberLiteral>(value);
-    }
-
-    if (match(TokenType::STRING)) {
-        return std::make_unique<StringLiteral>(tokens[current - 1].value);
-    }
-
-    if (match(TokenType::IDENTIFIER)) {
-        return std::make_unique<Identifier>(tokens[current - 1].value);
-    }
+    if (match(TokenType::BOOLEAN)) return std::make_unique<BooleanLiteral>(tokens[current - 1].value == "true");
+    if (match(TokenType::NUMBER)) return std::make_unique<NumberLiteral>(std::stod(tokens[current - 1].value));
+    if (match(TokenType::STRING)) return std::make_unique<StringLiteral>(tokens[current - 1].value);
+    if (match(TokenType::IDENTIFIER)) return std::make_unique<Identifier>(tokens[current - 1].value);
 
     if (match(TokenType::LPAREN)) {
         auto expr = expression();
-        if (!match(TokenType::RPAREN)) {
-            throw std::runtime_error(format_error("Expected ')' after expression", peek()));
-        }
+        if (!match(TokenType::RPAREN)) throw std::runtime_error(format_error("Expected ')' after expression", peek()));
         return expr;
     }
 
@@ -684,33 +477,21 @@ std::unique_ptr<Expression> Parser::primary() {
                 elements.push_back(expression());
             } while (match(TokenType::COMMA));
         }
-        if (!match(TokenType::RBRACKET)) {
-            throw std::runtime_error(format_error("Expected ']' after list elements", peek()));
-        }
+        if (!match(TokenType::RBRACKET)) throw std::runtime_error(format_error("Expected ']' after list elements", peek()));
         return std::make_unique<ListLiteral>(std::move(elements));
     }
 
     if (match(TokenType::LBRACE)) {
         std::vector<std::unique_ptr<Expression>> keys;
         std::vector<std::unique_ptr<Expression>> values;
-
         if (!check(TokenType::RBRACE)) {
             do {
-                auto key = expression();
-                if (!match(TokenType::COLON)) {
-                    throw std::runtime_error(format_error("Expected ':' after dictionary key", peek()));
-                }
-                auto value = expression();
-
-                keys.push_back(std::move(key));
-                values.push_back(std::move(value));
+                keys.push_back(expression());
+                if (!match(TokenType::COLON)) throw std::runtime_error(format_error("Expected ':' after dictionary key", peek()));
+                values.push_back(expression());
             } while (match(TokenType::COMMA));
         }
-
-        if (!match(TokenType::RBRACE)) {
-            throw std::runtime_error(format_error("Expected '}' to close dictionary", peek()));
-        }
-
+        if (!match(TokenType::RBRACE)) throw std::runtime_error(format_error("Expected '}' to close dictionary", peek()));
         return std::make_unique<DictLiteral>(std::move(keys), std::move(values));
     }
 

@@ -20,8 +20,15 @@ void VirtualMachine::execute(const std::vector<Instruction>& bytecode) {
             executeInstruction(instructions[pc]);
             pc++;
         } catch (const std::runtime_error& e) {
-            std::cerr << "Runtime Error: " << e.what() << " at instruction " << pc << std::endl;
-            running = false;
+            if (!tryStack.empty()) {
+                pc = tryStack.top().failAddress;
+                while (stack.size() > tryStack.top().stackSize) {
+                    stack.pop();
+                }
+            } else {
+                std::cerr << "Runtime Error: " << e.what() << " at instruction " << pc << std::endl;
+                running = false;
+            }
         }
     }
 }
@@ -85,6 +92,18 @@ Value VirtualMachine::getVariable(const std::string& name) {
 
 void VirtualMachine::executeInstruction(const Instruction& instr) {
     switch (instr.opcode) {
+        case OpCode::TRY_START: {
+            int failAddr = std::stoi(instr.operands[0]);
+            tryStack.push({failAddr, stack.size()});
+            break;
+        }
+
+        case OpCode::TRY_END: {
+            if (!tryStack.empty()) {
+                tryStack.pop();
+            }
+            break;
+        }
         case OpCode::PUSH_NUMBER:
             push(Value(std::stod(instr.operands[0])));
             break;

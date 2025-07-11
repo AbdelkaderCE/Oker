@@ -89,6 +89,8 @@ Value BuiltinFunctions::type(const std::vector<Value>& args, VirtualMachine& vm)
         return Value(std::string("boolean"));
     } else if (std::holds_alternative<std::shared_ptr<OkerList>>(value)) {
         return Value(std::string("list"));
+    } else if (std::holds_alternative<std::shared_ptr<OkerDict>>(value)) {
+        return Value(std::string("dictionary"));
     }
     return Value(std::string("unknown"));
 }

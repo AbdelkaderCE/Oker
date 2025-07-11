@@ -1,13 +1,25 @@
-~ Test 1: Lists Only
-say "--- Test 1: Verifying List Indexing ---"
+~ nested_data_test.oker
+~ This test specifically verifies that chained indexing for both
+~ assignment and access is working correctly after the recent fixes.
 
-let my_list = [10, 20, 30]
-say "  -> Initial list: " + str(my_list)
+say "--- Nested Data Structure Verification Test ---"
 
-my_list[1] = 25 ~ Modify
-say "  -> Modified list: " + str(my_list)
+let records = [
+    {"id": 1, "tags": ["a", "b"]},
+    {"id": 2, "tags": ["c", "d"]}
+]
 
-let item = my_list[1] ~ Access
-say "  -> Accessed item: " + str(item)
+say "  -> Initial records: " + str(records)
 
-say "\n--- List Test Finished ---"
+~ 1. Test Chained Assignment:
+~ This line will fail if the parser cannot handle complex assignment targets.
+records[0]["tags"][1] = "z"
+say "  -> Records after modification: " + str(records)
+
+~ 2. Test Chained Access:
+~ This line will fail if the semantic analyzer or VM cannot handle
+~ resolving a deeply nested value.
+let accessed_item = records[0]["tags"][1]
+say "  -> Directly accessed item: " + accessed_item
+
+say "\n--- Verification Test Passed ---"

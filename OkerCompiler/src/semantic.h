@@ -75,6 +75,8 @@ private:
     void analyzeBreakStatement(BreakStatement* stmt);
     void analyzeContinueStatement(ContinueStatement* stmt);
     void analyzeExpressionStatement(ExpressionStatement* stmt);
+    // This was the missing line
+    void analyzeTryStatement(TryStatement* stmt);
 
     bool isCompatible(ValueType expected, ValueType actual);
     std::string typeToString(ValueType type);

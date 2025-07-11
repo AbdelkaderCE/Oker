@@ -51,9 +51,34 @@ void CodeGenerator::generateStatement(Statement* stmt) {
         case NodeType::EXPRESSION_STATEMENT:
             generateExpressionStatement(static_cast<ExpressionStatement*>(stmt));
             break;
+        case NodeType::TRY_STATEMENT:
+            generateTryStatement(static_cast<TryStatement*>(stmt));
+            break;
         default:
             break;
     }
+}
+
+void CodeGenerator::generateTryStatement(TryStatement* stmt) {
+    std::string failLabel = generateLabel();
+    std::string endLabel = generateLabel();
+
+    emit(OpCode::TRY_START, failLabel);
+
+    for (auto& tryStmt : stmt->tryBlock) {
+        generateStatement(tryStmt.get());
+    }
+
+    emit(OpCode::TRY_END);
+    emit(OpCode::JUMP, endLabel);
+
+    markLabel(failLabel);
+
+    for (auto& failStmt : stmt->failBlock) {
+        generateStatement(failStmt.get());
+    }
+
+    markLabel(endLabel);
 }
 
 void CodeGenerator::generateExpression(Expression* expr) {
@@ -396,7 +421,7 @@ void CodeGenerator::patchJumps(const std::string& label) {
 void CodeGenerator::patchAllJumps() {
     for (auto& instr : instructions) {
         if ((instr.opcode == OpCode::JUMP || instr.opcode == OpCode::JUMP_IF_FALSE || 
-             instr.opcode == OpCode::JUMP_IF_TRUE) && !instr.operands.empty()) {
+             instr.opcode == OpCode::JUMP_IF_TRUE || instr.opcode == OpCode::TRY_START) && !instr.operands.empty()) {
             const std::string& label = instr.operands[0];
             if (labelMap.count(label)) {
                 instr.operands[0] = std::to_string(labelMap[label]);
@@ -464,6 +489,8 @@ std::string CodeGenerator::opcodeToString(OpCode opcode) {
         case OpCode::BUILD_DICT: return "BUILD_DICT";
         case OpCode::INCREMENT: return "INCREMENT";
         case OpCode::DECREMENT: return "DECREMENT";
+        case OpCode::TRY_START: return "TRY_START";
+        case OpCode::TRY_END: return "TRY_END";
         default: return "UNKNOWN";
     }
 }
