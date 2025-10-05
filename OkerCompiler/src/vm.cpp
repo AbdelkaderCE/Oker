@@ -208,7 +208,7 @@ void VirtualMachine::executeInstruction(const Instruction& instr) {
 
             for (size_t i = 0; i < func.parameters.size(); i++) {
                 if (i < args.size()) {
-                    frame.localVars[func.parameters[i]] = args[argCount - 1 - i];
+                    frame.localVars[func.parameters[i]] = args[i];  // Direct assignment
                 }
             }
 
