@@ -1,3 +1,6 @@
+
+<img width="500" height="400" alt="3(1)" src="https://github.com/user-attachments/assets/b8214436-53a3-4739-95f4-ddd01b72cc04" />
+
 # Oker Programming Language
 
 ## Overview
